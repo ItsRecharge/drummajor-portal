@@ -30,9 +30,11 @@ if [ "$LOCAL" != "$REMOTE" ]; then
   needs_build=1
 fi
 
-# Fresh clone (already at origin/main) or wiped artifacts: deps/build never ran.
-if [ ! -x node_modules/.bin/next ] || [ ! -d .next ]; then
-  echo "[update] missing node_modules/.next; forcing first build ..."
+# Fresh clone (already at origin/main), wiped artifacts, or a partial/failed
+# build: deps/build never completed. Check .next/BUILD_ID — the marker of a
+# *successful* build — not just the .next dir, which a failed build leaves behind.
+if [ ! -x node_modules/.bin/next ] || [ ! -f .next/BUILD_ID ]; then
+  echo "[update] missing deps or completed build; forcing rebuild ..."
   needs_build=1
 fi
 
