@@ -22,10 +22,21 @@ git fetch --quiet origin "$BRANCH"
 LOCAL="$(git rev-parse HEAD)"
 REMOTE="$(git rev-parse "origin/$BRANCH")"
 
+needs_build=0
+
 if [ "$LOCAL" != "$REMOTE" ]; then
   echo "[update] new changes ($LOCAL -> $REMOTE), updating ..."
   git pull --ff-only origin "$BRANCH"
+  needs_build=1
+fi
 
+# Fresh clone (already at origin/main) or wiped artifacts: deps/build never ran.
+if [ ! -x node_modules/.bin/next ] || [ ! -d .next ]; then
+  echo "[update] missing node_modules/.next; forcing first build ..."
+  needs_build=1
+fi
+
+if [ "$needs_build" -eq 1 ]; then
   echo "[update] installing dependencies ..."
   npm ci
 
@@ -35,7 +46,7 @@ if [ "$LOCAL" != "$REMOTE" ]; then
   echo "[update] building ..."
   npm run build
 else
-  echo "[update] already up to date ($LOCAL); skipping rebuild."
+  echo "[update] already up to date ($LOCAL) and built; skipping rebuild."
 fi
 
 echo "[update] starting server on port $PORT ..."

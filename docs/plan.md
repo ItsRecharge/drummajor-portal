@@ -108,7 +108,7 @@ x, y, anonymous, authorId) + `NoteVote` + `NoteComment` · `VaultDocument` ·
 - Provision the music-dept server: install Node (LTS) and PostgreSQL natively; create DB +
   role; install Caddy.
 - Write `drummajor-portal.service` systemd unit + `EnvironmentFile`; Caddyfile pointing the
-  user's domain at `localhost:3000` with auto-TLS.
+  user's domain at `localhost:3002` with auto-TLS.
 - AES-256-GCM encrypt/decrypt helpers; `APP_ENCRYPTION_KEY` generated and stored in env file.
 - **Verify:** `systemctl status` shows the service active; the domain serves a placeholder
   page over HTTPS.
