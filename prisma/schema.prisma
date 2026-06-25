@@ -1,0 +1,399 @@
+// Drum Major Portal — Prisma schema
+// Core data model per docs/plan.md. Stage 0 establishes the full relational
+// model; later stages add behavior. See pris.ly/d/prisma-schema.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7: connection URL lives in prisma.config.ts; the client uses a
+  // driver adapter (@prisma/adapter-pg). See src/lib/prisma.ts.
+}
+
+// ---------------------------------------------------------------------------
+// Org & settings
+// ---------------------------------------------------------------------------
+
+// Single-row organization config created by the first-run wizard.
+model Organization {
+  id        String   @id @default(cuid())
+  schoolName String
+  bandName  String
+  slug      String   @unique
+  baseUrl   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Single-row app settings. SMTP + Drive credentials stored encrypted at rest
+// (AES-256-GCM) — never persisted in plaintext. See src/lib/crypto.
+model AppSettings {
+  id               String   @id @default(cuid())
+  // Encrypted JSON blob: { host, port, user (band email), appPassword }
+  smtpConfigEnc    String?
+  // Encrypted service-account JSON + drive strategy/root folder id
+  driveConfigEnc   String?
+  driveRootFolderId String?
+  approvalRequired Boolean  @default(false)
+  setupComplete    Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Users, invites, sessions
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  DRUM_MAJOR
+  LIBRARIAN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  role          Role      @default(DRUM_MAJOR)
+  passwordHash  String
+  gradYear      Int?
+  instrument    String?
+  photoUrl      String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions          Session[]
+  invitesSent       Invite[]            @relation("InvitedBy")
+  announcements     Announcement[]
+  assignedTasks     Task[]              @relation("TaskAssignee")
+  notes             Note[]
+  noteVotes         NoteVote[]
+  noteComments      NoteComment[]
+  notifications     Notification[]
+  auditEntries      AuditLog[]
+  securityEntries   SecurityLog[]       @relation("ActorSecurity")
+  impersonatedBy    SecurityLog[]       @relation("TargetSecurity")
+  emailVerifTokens  EmailVerification[]
+  passwordResets    PasswordReset[]
+}
+
+// Server-side session records (Auth.js DB sessions / log-out-other-devices).
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Invite {
+  id          String   @id @default(cuid())
+  email       String
+  role        Role     @default(DRUM_MAJOR)
+  token       String   @unique
+  invitedById String
+  invitedBy   User     @relation("InvitedBy", fields: [invitedById], references: [id])
+  acceptedAt  DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([email])
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // The (possibly new) email address being verified.
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Rosters & groups
+// ---------------------------------------------------------------------------
+
+model Contact {
+  id         String         @id @default(cuid())
+  name       String
+  email      String         @unique
+  instrument String?
+  grade      Int?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  groups     ContactGroup[]
+}
+
+model Group {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  // Built-in groups (Everyone/Marching/Concert/Jazz) cannot be deleted.
+  builtIn   Boolean        @default(false)
+  createdAt DateTime       @default(now())
+  contacts  ContactGroup[]
+  announcementLinks AnnouncementRecipientGroup[]
+}
+
+model ContactGroup {
+  contactId String
+  groupId   String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  group     Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, groupId])
+  @@index([groupId])
+}
+
+// ---------------------------------------------------------------------------
+// Announcements
+// ---------------------------------------------------------------------------
+
+enum AnnouncementStatus {
+  DRAFT
+  SCHEDULED
+  PENDING_APPROVAL
+  SENDING
+  SENT
+  FAILED
+}
+
+model Announcement {
+  id          String             @id @default(cuid())
+  subject     String
+  bodyHtml    String
+  status      AnnouncementStatus @default(DRAFT)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  authorId    String
+  author      User               @relation(fields: [authorId], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  recipientGroups AnnouncementRecipientGroup[]
+  musicAttachments AnnouncementMusic[]
+  deliveries      EmailDelivery[]
+}
+
+model AnnouncementRecipientGroup {
+  announcementId String
+  groupId        String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  group          Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, groupId])
+}
+
+model AnnouncementMusic {
+  announcementId String
+  musicPieceId   String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  musicPiece     MusicPiece   @relation(fields: [musicPieceId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, musicPieceId])
+}
+
+// Per-recipient delivery record; powers the open-tracking pixel + counts.
+model EmailDelivery {
+  id             String   @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  recipientEmail String
+  trackingToken  String   @unique
+  sentAt         DateTime?
+  openedAt       DateTime?
+  error          String?
+
+  @@index([announcementId])
+}
+
+model AnnouncementTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  bodyHtml  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Music library (Google Drive-backed)
+// ---------------------------------------------------------------------------
+
+model MusicPiece {
+  id           String   @id @default(cuid())
+  title        String
+  composer     String?
+  arranger     String?
+  ensemble     String?
+  tags         String[]
+  notes        String?
+  driveFolderId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  files            MusicFile[]
+  announcementLinks AnnouncementMusic[]
+}
+
+model MusicFile {
+  id           String   @id @default(cuid())
+  musicPieceId String
+  musicPiece   MusicPiece @relation(fields: [musicPieceId], references: [id], onDelete: Cascade)
+  filename     String
+  driveFileId  String
+  sizeBytes    BigInt?
+  version      Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  @@index([musicPieceId])
+}
+
+// ---------------------------------------------------------------------------
+// Planning: events, tasks
+// ---------------------------------------------------------------------------
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  time        String?
+  notify      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Task {
+  id         String     @id @default(cuid())
+  title      String
+  status     TaskStatus @default(TODO)
+  assigneeId String?
+  assignee   User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Sticky-note idea board
+// ---------------------------------------------------------------------------
+
+model Note {
+  id        String        @id @default(cuid())
+  text      String
+  color     String        @default("#fff3a0")
+  category  String?
+  x         Float         @default(0)
+  y         Float         @default(0)
+  anonymous Boolean       @default(false)
+  authorId  String
+  author    User          @relation(fields: [authorId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  votes     NoteVote[]
+  comments  NoteComment[]
+}
+
+model NoteVote {
+  noteId String
+  userId String
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, userId])
+}
+
+model NoteComment {
+  id        String   @id @default(cuid())
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Document vault
+// ---------------------------------------------------------------------------
+
+model VaultDocument {
+  id          String   @id @default(cuid())
+  title       String
+  category    String?
+  driveFileId String
+  filename    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Notifications, audit & security logs
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  payload   Json
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Public (admin-visible) audit log. Impersonation is NOT recorded here.
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  action    String
+  target    String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Separate admin-only security log; records impersonation start/stop so
+// actions taken while impersonating remain accountable.
+model SecurityLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation("ActorSecurity", fields: [actorId], references: [id])
+  targetId   String?
+  target     User?    @relation("TargetSecurity", fields: [targetId], references: [id])
+  action     String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}

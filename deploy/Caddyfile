@@ -1,0 +1,11 @@
+# Caddy reverse proxy for the Drum Major Portal.
+# Install to /etc/caddy/Caddyfile and reload:  sudo systemctl reload caddy
+#
+# Replace portal.example.org with the real domain. Caddy provisions and renews
+# TLS automatically as long as the domain's DNS A/AAAA record points at this
+# server and ports 80/443 are reachable.
+
+portal.example.org {
+	encode gzip zstd
+	reverse_proxy 127.0.0.1:3000
+}
