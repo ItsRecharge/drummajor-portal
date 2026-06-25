@@ -24,7 +24,7 @@ DB_USER="portal"
 ENV_DIR="/etc/drummajor-portal"
 ENV_FILE="$ENV_DIR/portal.env"
 SERVICE_NAME="drummajor-portal"
-PUBLIC_URL="${1:-http://localhost:3000}"
+PUBLIC_URL="${1:-http://localhost:3002}"
 
 # Resolve the repo dir (parent of this script's deploy/ folder) and its owner.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

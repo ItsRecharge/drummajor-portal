@@ -11,7 +11,7 @@
 set -euo pipefail
 
 APP_DIR="/home/musicserver/drummajor-portal"
-PORT="${PORT:-3000}"
+PORT="${PORT:-3002}"
 BRANCH="${BRANCH:-main}"
 
 cd "$APP_DIR"
