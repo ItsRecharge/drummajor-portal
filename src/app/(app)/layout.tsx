@@ -49,6 +49,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
           ) : null}
           {canInvite ? (
+            <Link href="/notes" className="text-muted-foreground hover:text-foreground">
+              Ideas
+            </Link>
+          ) : null}
+          {canInvite ? (
+            <Link href="/vault" className="text-muted-foreground hover:text-foreground">
+              Vault
+            </Link>
+          ) : null}
+          {canInvite ? (
+            <Link href="/handoff" className="text-muted-foreground hover:text-foreground">
+              Handoff
+            </Link>
+          ) : null}
+          {canInvite ? (
             <Link href="/rosters" className="text-muted-foreground hover:text-foreground">
               Roster
             </Link>
@@ -61,6 +76,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {isAdmin ? (
             <Link href="/admin/users" className="text-muted-foreground hover:text-foreground">
               Members
+            </Link>
+          ) : null}
+          {isAdmin ? (
+            <Link href="/audit" className="text-muted-foreground hover:text-foreground">
+              Logs
             </Link>
           ) : null}
           <Link href="/settings" className="text-muted-foreground hover:text-foreground">

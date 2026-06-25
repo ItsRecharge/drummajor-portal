@@ -146,6 +146,31 @@ export const taskSchema = z.object({
   assigneeId: z.string().optional(),
 });
 
+export const noteSchema = z.object({
+  text: z.string().trim().min(1, "Write something"),
+  color: z.string().optional(),
+  category: z.string().optional(),
+  // Checkbox: present ("on") means hide the author.
+  anonymous: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
+});
+
+export const noteCommentSchema = z.object({
+  noteId: z.string().min(1),
+  text: z.string().trim().min(1, "Write a comment"),
+});
+
+export const handoffNoteSchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100),
+  category: z.enum(["WHAT_WORKED", "WHAT_DIDNT", "TIP"]),
+  title: z.string().trim().min(1, "Required"),
+  bodyHtml: z.string().trim().min(1, "Write something"),
+});
+
+export const vaultDocumentSchema = z.object({
+  title: z.string().trim().min(1, "Required"),
+  category: z.string().optional(),
+});
+
 export const musicPieceSchema = z.object({
   title: z.string().trim().min(1, "Required"),
   composer: z.string().optional(),

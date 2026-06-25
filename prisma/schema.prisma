@@ -37,6 +37,8 @@ model AppSettings {
   // Encrypted service-account JSON + drive strategy/root folder id
   driveConfigEnc   String?
   driveRootFolderId String?
+  // Lazily-created "Document Vault" folder under the Drive root (Stage 7).
+  vaultRootFolderId String?
   approvalRequired Boolean  @default(false)
   setupComplete    Boolean  @default(false)
   createdAt        DateTime @default(now())
@@ -73,6 +75,8 @@ model User {
   notes             Note[]
   noteVotes         NoteVote[]
   noteComments      NoteComment[]
+  vaultUploads      VaultDocument[]
+  handoffNotes      HandoffNote[]
   notifications     Notification[]
   auditEntries      AuditLog[]
   securityEntries   SecurityLog[]       @relation("ActorSecurity")
@@ -345,13 +349,31 @@ model NoteComment {
 // ---------------------------------------------------------------------------
 
 model VaultDocument {
-  id          String   @id @default(cuid())
-  title       String
-  category    String?
-  driveFileId String
-  filename    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  title        String
+  category     String?
+  driveFileId  String
+  filename     String
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Stage 9 — leadership handoff: year-over-year "what worked / didn't / tips"
+// notes that build institutional memory for incoming drum-major classes.
+model HandoffNote {
+  id        String   @id @default(cuid())
+  year      Int
+  category  String // WHAT_WORKED | WHAT_DIDNT | TIP
+  title     String
+  bodyHtml  String
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([year])
 }
 
 // ---------------------------------------------------------------------------

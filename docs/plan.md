@@ -324,3 +324,49 @@ real Postgres instead, set `DATABASE_URL` and `npx prisma migrate deploy`.
 > all clean; dev server boots on PGlite, scheduler starts, tracking pixel serves a valid
 > 1×1 GIF. Remaining verification (real Gmail send, Drive upload/preview, open round-trip)
 > runs on the music-dept server with live SMTP + service-account creds.
+
+### Stage 6 — Sticky-note idea board — CODE COMPLETE
+
+- [x] Schema already had `Note`/`NoteVote`/`NoteComment`; no migration needed
+- [x] `(app)/notes` — `actions.ts` (create, drag-persist position, delete, toggle vote,
+      add comment), server `page.tsx`, client `board.tsx`
+- [x] Desktop: draggable Post-it wall (pointer events, position persisted on drag end via
+      a bound server action). Mobile: scrollable card list (`md:hidden`)
+- [x] Color picker + category + "hide my name" (anonymous) toggle; upvote button + count;
+      comment thread in a dialog (`@base-ui` Dialog)
+- [x] Vote/comment notify the note author (`NOTE_VOTE`/`NOTE_COMMENT`); notifications page
+      labels added; dashboard gains a "Top ideas" peek (ordered by vote count)
+- [x] Gated to Admin + Drum Major; nav link "Ideas"; `proxy.ts` matcher `/notes`
+
+### Stage 7 — Document vault (Google Drive) — CODE COMPLETE (live Drive pending creds)
+
+- [x] Migration `1_stage6_9`: `AppSettings.vaultRootFolderId`, `VaultDocument.uploadedById`
+- [x] `src/lib/drive.ts` — `ensureVaultFolder()` lazily creates a "Document Vault" folder
+      under the Band Library root (kept separate from per-piece music folders)
+- [x] `(app)/vault` — upload (any file type), list grouped by category, search
+      (title/category/filename), delete; auth-gated preview proxy `[id]/file/route.ts`
+- [x] Gated to Admin + Drum Major; nav link "Vault"; `proxy.ts` matcher `/vault`
+
+### Stage 8 — Audit & security logs (full) — CODE COMPLETE
+
+- [x] `(app)/audit` (admin-only) — two link "tabs": **Activity** (public `AuditLog`) and
+      **Security** (impersonation-only `SecurityLog`, kept separate per the Security Model)
+- [x] Free-text search across action / target / person; humanized action labels; 100-row cap
+- [x] Nav link "Logs" (admin); `proxy.ts` matcher `/audit`
+
+### Stage 9 — Leadership handoff center — CODE COMPLETE
+
+- [x] Migration `1_stage6_9`: new `HandoffNote` model (year, category, title, bodyHtml,
+      author) + `year` index
+- [x] `(app)/handoff` — add note (year + What worked/What didn't/Tip + RichText body,
+      sanitized server-side), list grouped by year with category badges, author/admin delete
+- [x] "Archive" card linking to past announcements / music / events with counts
+- [x] Gated to Admin + Drum Major; nav link "Handoff"; `proxy.ts` matcher `/handoff`
+
+> **Dev DB tooling:** `scripts/dev-db.mjs` now applies every `prisma/migrations/*` in order
+> once (tracked in a `_dev_migrations` table), so PGlite picks up `1_stage6_9` automatically.
+>
+> **Stages 6–9 code complete.** `npx tsc --noEmit`, `npm run build`, `npm run lint` all clean;
+> dev server boots on PGlite with the new migration applied; `/notes`, `/vault`, `/audit`,
+> `/handoff` all serve (auth-gated). Live Drive upload/preview for the vault verifies on the
+> server with real service-account creds (same caveat as Stage 4).

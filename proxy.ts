@@ -27,6 +27,10 @@ export const config = {
     "/music/:path*",
     "/events/:path*",
     "/tasks/:path*",
+    "/notes/:path*",
+    "/vault/:path*",
+    "/handoff/:path*",
+    "/audit/:path*",
     "/notifications/:path*",
   ],
 };

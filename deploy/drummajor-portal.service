@@ -5,8 +5,9 @@
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now drummajor-portal
 #
-# Assumes the app is checked out at /opt/drummajor-portal, built with
-# `npm run build`, and that Node 22 is available (see deploy/README.md).
+# On every (re)start this runs deploy/update-and-run.sh, which pulls new
+# commits, rebuilds when needed, then execs `next start`.
+# App lives at /home/musicserver/drummajor-portal, owned by `musicserver`.
 
 [Unit]
 Description=Drum Major Portal (Next.js)
@@ -15,20 +16,24 @@ Wants=postgresql.service
 
 [Service]
 Type=simple
-User=portal
-Group=portal
-WorkingDirectory=/opt/drummajor-portal
-# Secrets + DB URL live here, root-readable only (chmod 600, owner root:portal).
+User=musicserver
+Group=musicserver
+WorkingDirectory=/home/musicserver/drummajor-portal
+# Secrets + DB URL live here (chmod 640, owner root:musicserver).
 EnvironmentFile=/etc/drummajor-portal/portal.env
-# Adjust the node path to wherever Node 22 is installed on the server.
-ExecStart=/usr/bin/node /opt/drummajor-portal/node_modules/.bin/next start -p 3000
+# systemd ships a minimal PATH; add where node/npm/git/npx live so the
+# update script can find them. Adjust if you use nvm or a custom prefix.
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/musicserver/drummajor-portal/deploy/update-and-run.sh
+# Build can take a while on first run / big updates — don't time out the start.
+TimeoutStartSec=0
 Restart=on-failure
 RestartSec=5
-# Hardening
+# Hardening (ProtectHome must stay false: the app lives under /home).
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
-ProtectHome=true
+ProtectHome=false
 
 [Install]
 WantedBy=multi-user.target

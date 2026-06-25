@@ -68,6 +68,23 @@ export async function ensureRootFolder(): Promise<string> {
   return folderId;
 }
 
+// Lazily create + remember a "Document Vault" folder under the Band Library root,
+// kept separate from the per-piece music folders (Stage 7 document vault).
+export async function ensureVaultFolder(): Promise<string> {
+  const settings = await prisma.appSettings.findFirst({
+    select: { id: true, vaultRootFolderId: true },
+  });
+  if (!settings) throw new Error("App settings missing");
+  if (settings.vaultRootFolderId) return settings.vaultRootFolderId;
+  const root = await ensureRootFolder();
+  const folderId = await createFolder("Document Vault", root);
+  await prisma.appSettings.update({
+    where: { id: settings.id },
+    data: { vaultRootFolderId: folderId },
+  });
+  return folderId;
+}
+
 export async function uploadFile(opts: {
   folderId: string;
   filename: string;

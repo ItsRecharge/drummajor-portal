@@ -18,6 +18,10 @@ function summarize(type: string, payload: unknown): string {
       return `New music added: ${p.title ?? ""}`;
     case "EVENT":
       return `New event: ${p.title ?? ""}${p.when ? ` (${p.when})` : ""}`;
+    case "NOTE_VOTE":
+      return `${p.voter ?? "Someone"} upvoted your idea`;
+    case "NOTE_COMMENT":
+      return `${p.commenter ?? "Someone"} commented on your idea`;
     default:
       return type;
   }

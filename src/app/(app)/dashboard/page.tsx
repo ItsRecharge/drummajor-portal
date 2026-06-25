@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const { user } = await requireAuth();
   const now = new Date();
 
-  const [events, announcements, music, myTasks, unread] = await Promise.all([
+  const [events, announcements, music, myTasks, ideas, unread] = await Promise.all([
     prisma.event.findMany({ where: { date: { gte: now } }, orderBy: { date: "asc" }, take: 5 }),
     prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.musicPiece.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
@@ -20,6 +20,11 @@ export default async function DashboardPage() {
       where: { assigneeId: user.id, status: { not: TaskStatus.COMPLETED } },
       orderBy: { createdAt: "asc" },
       take: 5,
+    }),
+    prisma.note.findMany({
+      orderBy: { votes: { _count: "desc" } },
+      take: 5,
+      include: { _count: { select: { votes: true } } },
     }),
     unreadCount(user.id),
   ]);
@@ -105,6 +110,24 @@ export default async function DashboardPage() {
                     {t.status === TaskStatus.IN_PROGRESS ? "In progress" : "To do"}
                   </span>
                 </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Top ideas</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-1.5 text-sm">
+            {ideas.length === 0 ? (
+              <CardDescription>No ideas yet.</CardDescription>
+            ) : (
+              ideas.map((n) => (
+                <Link key={n.id} href="/notes" className="flex justify-between gap-2 hover:underline">
+                  <span className="truncate">{n.text}</span>
+                  <span className="shrink-0 text-muted-foreground">▲ {n._count.votes}</span>
+                </Link>
               ))
             )}
           </CardContent>
