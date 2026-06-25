@@ -38,7 +38,15 @@ fi
 
 if [ "$needs_build" -eq 1 ]; then
   echo "[update] installing dependencies ..."
-  npm ci
+  # --include=dev: portal.env sets NODE_ENV=production, which would otherwise make
+  # `npm ci` skip devDependencies (tailwindcss, @tailwindcss/postcss, prisma, etc.)
+  # that the build needs. Runtime still honors NODE_ENV for `next start`.
+  npm ci --include=dev
+
+  echo "[update] generating Prisma client ..."
+  # The generated client (src/generated/prisma) is gitignored, so it must be built
+  # here. `prisma migrate deploy` does NOT generate it.
+  npx prisma generate
 
   echo "[update] applying database migrations ..."
   npx prisma migrate deploy
