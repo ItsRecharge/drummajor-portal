@@ -20,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const unread = await unreadCount(user.id);
 
   return (
-    <div className="flex min-h-full">
+    <div className="flex min-h-screen">
       <AppSidebar canInvite={canInvite} canMusic={canMusic} />
       <div className="flex min-h-full flex-1 flex-col">
         {impersonating ? <ImpersonationBanner targetName={user.name} /> : null}
