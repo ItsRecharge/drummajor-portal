@@ -43,7 +43,7 @@ export default async function RostersPage() {
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold">Roster</h1>
+      <h1 className="text-2xl font-bold tracking-tight uppercase">Roster</h1>
 
       <Card>
         <CardHeader>

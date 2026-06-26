@@ -47,7 +47,7 @@ export default async function VaultPage({
   return (
     <div className="grid gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Document vault</h1>
+        <h1 className="text-2xl font-bold tracking-tight uppercase">Document vault</h1>
         <p className="text-sm text-muted-foreground">
           Handbooks, parade routes, agendas, packets, and budgets — stored on Google Drive,
           separate from the music library.
@@ -61,7 +61,7 @@ export default async function VaultPage({
         </CardHeader>
         <CardContent className="grid gap-4">
           {!driveReady ? (
-            <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <p className="rounded-md border border-primary/40 bg-primary/10 p-3 text-sm text-foreground">
               Google Drive isn&apos;t configured yet. Finish the Drive step in setup before uploading.
             </p>
           ) : null}

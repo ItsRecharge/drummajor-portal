@@ -21,7 +21,7 @@ export default async function NewMusicPage() {
       </CardHeader>
       <CardContent className="grid gap-4">
         {!driveReady ? (
-          <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="rounded-md border border-primary/40 bg-primary/10 p-3 text-sm text-foreground">
             Google Drive isn&apos;t configured yet. Finish the Drive step in setup before uploading.
           </p>
         ) : null}

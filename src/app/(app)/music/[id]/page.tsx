@@ -22,7 +22,7 @@ export default async function MusicDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="grid gap-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="truncate text-2xl font-semibold">{piece.title}</h1>
+        <h1 className="truncate text-2xl font-bold tracking-tight uppercase">{piece.title}</h1>
         <Link href="/music" className={buttonVariants({ variant: "ghost" })}>
           Back
         </Link>

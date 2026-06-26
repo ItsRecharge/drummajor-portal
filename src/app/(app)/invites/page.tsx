@@ -21,7 +21,7 @@ export default async function InvitesPage() {
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold">Invites</h1>
+      <h1 className="text-2xl font-bold tracking-tight uppercase">Invites</h1>
 
       <Card>
         <CardHeader>

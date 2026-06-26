@@ -94,7 +94,7 @@ export function CsvImport() {
 
       {result ? (
         result.ok ? (
-          <p className="text-sm text-green-600">
+          <p className="text-sm text-success">
             Imported {result.imported}; skipped {result.skipped}; errors {result.errors}.
           </p>
         ) : (

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Bell } from "lucide-react";
 import { requireAuth } from "@/lib/auth";
 import { isSetupComplete } from "@/lib/settings";
 import { unreadCount } from "@/lib/notify";
 import { Role } from "@/generated/prisma/client";
-import { Button } from "@/components/ui/button";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
+import { AppSidebar } from "@/components/app-sidebar";
+import { UserMenu } from "@/components/user-menu";
 import { logoutAction } from "./actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -18,89 +20,33 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const unread = await unreadCount(user.id);
 
   return (
-    <div className="flex min-h-full flex-col">
-      {impersonating ? <ImpersonationBanner targetName={user.name} /> : null}
-      <header className="flex items-center justify-between border-b px-4 py-3">
-        <nav className="flex items-center gap-4 text-sm">
-          <Link href="/dashboard" className="font-semibold">
-            Drum Major Portal
+    <div className="flex min-h-full">
+      <AppSidebar canInvite={canInvite} canMusic={canMusic} />
+      <div className="flex min-h-full flex-1 flex-col">
+        {impersonating ? <ImpersonationBanner targetName={user.name} /> : null}
+        <header className="flex items-center justify-end gap-2 border-b border-border px-4 py-2.5 pl-16 md:pl-4">
+          <Link
+            href="/notifications"
+            aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}
+            className="relative grid size-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <Bell className="size-5" />
+            {unread > 0 ? (
+              <span className="absolute top-1 right-1 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground tabular-nums">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            ) : null}
           </Link>
-          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
-            Dashboard
-          </Link>
-          {canInvite ? (
-            <Link href="/announcements" className="text-muted-foreground hover:text-foreground">
-              Announcements
-            </Link>
-          ) : null}
-          {canMusic ? (
-            <Link href="/music" className="text-muted-foreground hover:text-foreground">
-              Music
-            </Link>
-          ) : null}
-          {canInvite ? (
-            <Link href="/events" className="text-muted-foreground hover:text-foreground">
-              Events
-            </Link>
-          ) : null}
-          {canInvite ? (
-            <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-              Tasks
-            </Link>
-          ) : null}
-          {canInvite ? (
-            <Link href="/notes" className="text-muted-foreground hover:text-foreground">
-              Ideas
-            </Link>
-          ) : null}
-          {canInvite ? (
-            <Link href="/vault" className="text-muted-foreground hover:text-foreground">
-              Vault
-            </Link>
-          ) : null}
-          {canInvite ? (
-            <Link href="/handoff" className="text-muted-foreground hover:text-foreground">
-              Handoff
-            </Link>
-          ) : null}
-          {canInvite ? (
-            <Link href="/rosters" className="text-muted-foreground hover:text-foreground">
-              Roster
-            </Link>
-          ) : null}
-          {canInvite ? (
-            <Link href="/invites" className="text-muted-foreground hover:text-foreground">
-              Invites
-            </Link>
-          ) : null}
-          {isAdmin ? (
-            <Link href="/admin/users" className="text-muted-foreground hover:text-foreground">
-              Members
-            </Link>
-          ) : null}
-          {isAdmin ? (
-            <Link href="/audit" className="text-muted-foreground hover:text-foreground">
-              Logs
-            </Link>
-          ) : null}
-          <Link href="/settings" className="text-muted-foreground hover:text-foreground">
-            Settings
-          </Link>
-        </nav>
-        <div className="flex items-center gap-3 text-sm">
-          <Link href="/notifications" className="text-muted-foreground hover:text-foreground">
-            🔔{unread > 0 ? ` ${unread}` : ""}
-          </Link>
-          <span className="text-muted-foreground">{user.name}</span>
-          <form action={logoutAction}>
-            <Button type="submit" size="sm" variant="outline">
-              Sign out
-            </Button>
-          </form>
-        </div>
-      </header>
-      <div className="flex-1 px-4 py-8">
-        <div className="mx-auto w-full max-w-3xl">{children}</div>
+          <UserMenu
+            name={user.name}
+            canInvite={canInvite}
+            isAdmin={isAdmin}
+            logoutAction={logoutAction}
+          />
+        </header>
+        <main className="flex-1 px-4 py-8 md:px-8">
+          <div className="mx-auto w-full max-w-5xl">{children}</div>
+        </main>
       </div>
     </div>
   );

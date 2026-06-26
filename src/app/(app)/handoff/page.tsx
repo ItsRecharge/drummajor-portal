@@ -40,7 +40,7 @@ export default async function HandoffPage() {
   return (
     <div className="grid gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Leadership handoff center</h1>
+        <h1 className="text-2xl font-bold tracking-tight uppercase">Leadership handoff center</h1>
         <p className="text-sm text-muted-foreground">
           Year-over-year institutional memory: what worked, what didn&apos;t, and tips for the next
           drum-major class.

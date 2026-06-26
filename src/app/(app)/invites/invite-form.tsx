@@ -22,7 +22,7 @@ export function InviteForm({ roles }: { roles: Role[] }) {
         ) : null}
       </div>
       {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-green-600">{state.message}</p> : null}
+      {state.success ? <p className="text-sm text-success">{state.message}</p> : null}
       <div>
         <SubmitButton pendingLabel="Sending…">Send invite</SubmitButton>
       </div>

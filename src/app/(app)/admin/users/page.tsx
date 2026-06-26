@@ -21,7 +21,7 @@ export default async function MembersPage() {
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold">Members</h1>
+      <h1 className="text-2xl font-bold tracking-tight uppercase">Members</h1>
       <Card>
         <CardHeader>
           <CardTitle>All users</CardTitle>

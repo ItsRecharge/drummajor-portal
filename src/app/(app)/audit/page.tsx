@@ -70,7 +70,7 @@ export default async function AuditPage({
   return (
     <div className="grid gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Logs</h1>
+        <h1 className="text-2xl font-bold tracking-tight uppercase">Logs</h1>
         <p className="text-sm text-muted-foreground">
           The activity log records uploads, sends, deletes, and role changes. The security log is
           separate and records impersonation events only.

@@ -12,7 +12,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+      <h1 className="text-2xl font-bold tracking-tight uppercase">Settings</h1>
 
       <Card>
         <CardHeader>

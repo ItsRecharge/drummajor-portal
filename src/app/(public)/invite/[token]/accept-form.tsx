@@ -13,7 +13,7 @@ export function AcceptForm({ token, email }: { token: string; email: string }) {
   if (state.success) {
     return (
       <div className="grid gap-3">
-        <p className="text-sm text-green-600">{state.message}</p>
+        <p className="text-sm text-success">{state.message}</p>
         <Link href="/login" className="text-sm underline">
           Go to sign in
         </Link>

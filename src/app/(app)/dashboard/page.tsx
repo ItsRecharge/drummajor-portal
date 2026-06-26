@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalendarDays, Megaphone, Music, ListChecks, Lightbulb, ChevronUp } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { unreadCount } from "@/lib/notify";
@@ -12,39 +13,67 @@ export default async function DashboardPage() {
   const { user } = await requireAuth();
   const now = new Date();
 
-  const [events, announcements, music, myTasks, ideas, unread] = await Promise.all([
-    prisma.event.findMany({ where: { date: { gte: now } }, orderBy: { date: "asc" }, take: 5 }),
-    prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
-    prisma.musicPiece.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
-    prisma.task.findMany({
-      where: { assigneeId: user.id, status: { not: TaskStatus.COMPLETED } },
-      orderBy: { createdAt: "asc" },
-      take: 5,
-    }),
-    prisma.note.findMany({
-      orderBy: { votes: { _count: "desc" } },
-      take: 5,
-      include: { _count: { select: { votes: true } } },
-    }),
-    unreadCount(user.id),
-  ]);
+  const [events, announcements, music, myTasks, ideas, unread, eventCount, openTaskCount] =
+    await Promise.all([
+      prisma.event.findMany({ where: { date: { gte: now } }, orderBy: { date: "asc" }, take: 5 }),
+      prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
+      prisma.musicPiece.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
+      prisma.task.findMany({
+        where: { assigneeId: user.id, status: { not: TaskStatus.COMPLETED } },
+        orderBy: { createdAt: "asc" },
+        take: 5,
+      }),
+      prisma.note.findMany({
+        orderBy: { votes: { _count: "desc" } },
+        take: 5,
+        include: { _count: { select: { votes: true } } },
+      }),
+      unreadCount(user.id),
+      prisma.event.count({ where: { date: { gte: now } } }),
+      prisma.task.count({
+        where: { assigneeId: user.id, status: { not: TaskStatus.COMPLETED } },
+      }),
+    ]);
+
+  const today = now.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+
+  const stats = [
+    { value: eventCount, label: "Upcoming events" },
+    { value: unread, label: "Unread" },
+    { value: openTaskCount, label: "Open tasks" },
+  ];
 
   return (
     <div className="grid gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Welcome, {user.name}</h1>
-          <p className="text-sm text-muted-foreground">What needs attention today.</p>
+      {/* Scoreboard hero */}
+      <section className="field-grid rounded-lg border border-border bg-card/40 px-6 py-7">
+        <p className="eyebrow">Dashboard · {today}</p>
+        <h1 className="mt-1.5 text-3xl font-bold tracking-tight uppercase">
+          Welcome, {user.name}
+        </h1>
+        <div className="mt-6 grid grid-cols-3 gap-4">
+          {stats.map((s) => (
+            <div key={s.label}>
+              <div className="stat-numeral text-foreground">{s.value}</div>
+              <div className="mt-1 font-mono text-[0.7rem] tracking-widest text-muted-foreground uppercase">
+                {s.label}
+              </div>
+            </div>
+          ))}
         </div>
-        <Link href="/notifications" className="text-sm text-muted-foreground hover:text-foreground">
-          🔔 {unread} unread
-        </Link>
-      </div>
+      </section>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="border-t-2 border-t-primary">
           <CardHeader>
-            <CardTitle className="text-base">Upcoming events</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
+              <CalendarDays className="size-4 text-primary" />
+              Upcoming events
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-1.5 text-sm">
             {events.length === 0 ? (
@@ -60,9 +89,12 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-t-2 border-t-primary">
           <CardHeader>
-            <CardTitle className="text-base">Recent announcements</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
+              <Megaphone className="size-4 text-primary" />
+              Recent announcements
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-1.5 text-sm">
             {announcements.length === 0 ? (
@@ -78,9 +110,12 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-t-2 border-t-primary">
           <CardHeader>
-            <CardTitle className="text-base">New music</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
+              <Music className="size-4 text-primary" />
+              New music
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-1.5 text-sm">
             {music.length === 0 ? (
@@ -95,9 +130,12 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-t-2 border-t-primary">
           <CardHeader>
-            <CardTitle className="text-base">My tasks</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
+              <ListChecks className="size-4 text-primary" />
+              My tasks
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-1.5 text-sm">
             {myTasks.length === 0 ? (
@@ -115,9 +153,12 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-t-2 border-t-primary">
           <CardHeader>
-            <CardTitle className="text-base">Top ideas</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
+              <Lightbulb className="size-4 text-primary" />
+              Top ideas
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-1.5 text-sm">
             {ideas.length === 0 ? (
@@ -126,7 +167,10 @@ export default async function DashboardPage() {
               ideas.map((n) => (
                 <Link key={n.id} href="/notes" className="flex justify-between gap-2 hover:underline">
                   <span className="truncate">{n.text}</span>
-                  <span className="shrink-0 text-muted-foreground">▲ {n._count.votes}</span>
+                  <span className="flex shrink-0 items-center gap-0.5 text-muted-foreground tabular-nums">
+                    <ChevronUp className="size-3.5" />
+                    {n._count.votes}
+                  </span>
                 </Link>
               ))
             )}

@@ -39,7 +39,7 @@ export default async function AnnouncementDetailPage({
     <div className="grid gap-6">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold">{ann.subject}</h1>
+          <h1 className="truncate text-2xl font-bold tracking-tight uppercase">{ann.subject}</h1>
           <p className="text-sm text-muted-foreground">
             {ann.author.name} · {ann.createdAt.toLocaleString()}
           </p>

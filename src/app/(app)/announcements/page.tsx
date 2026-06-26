@@ -31,7 +31,7 @@ export default async function AnnouncementsPage() {
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Announcements</h1>
+          <h1 className="text-2xl font-bold tracking-tight uppercase">Announcements</h1>
           <p className="text-sm text-muted-foreground">Drafts, scheduled, and sent history.</p>
         </div>
         <Link href="/announcements/new" className={buttonVariants()}>

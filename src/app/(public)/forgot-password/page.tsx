@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
       </CardHeader>
       <CardContent>
         {state.success ? (
-          <p className="text-sm text-green-600">{state.message}</p>
+          <p className="text-sm text-success">{state.message}</p>
         ) : (
           <form action={action} className="grid gap-4">
             <Field

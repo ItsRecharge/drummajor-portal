@@ -44,7 +44,7 @@ export function HandoffForm({ defaultYear }: { defaultYear: number }) {
         ) : null}
       </div>
       {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
-      {state.message ? <p className="text-sm text-green-600">{state.message}</p> : null}
+      {state.message ? <p className="text-sm text-success">{state.message}</p> : null}
       <div>
         <SubmitButton pendingLabel="Saving…">Save note</SubmitButton>
       </div>

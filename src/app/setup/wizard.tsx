@@ -19,7 +19,7 @@ function FormError({ message }: { message?: string }) {
 
 function FormOk({ message }: { message?: string }) {
   if (!message) return null;
-  return <p className="text-sm text-green-600">{message}</p>;
+  return <p className="text-sm text-success">{message}</p>;
 }
 
 export function OrgStep() {

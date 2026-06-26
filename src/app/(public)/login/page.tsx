@@ -10,14 +10,15 @@ export default async function LoginPage({
 }) {
   const { reset } = await searchParams;
   return (
-    <Card>
+    <Card className="border-t-2 border-t-primary">
       <CardHeader>
-        <CardTitle>Sign in</CardTitle>
-        <CardDescription>Drum Major Portal</CardDescription>
+        <p className="eyebrow">Sideline · Sign in</p>
+        <CardTitle className="text-2xl uppercase tracking-wide">Sign in</CardTitle>
+        <CardDescription>Enter your credentials to continue.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
         {reset ? (
-          <p className="text-sm text-green-600">Password updated. You can sign in now.</p>
+          <p className="text-sm text-success">Password updated. You can sign in now.</p>
         ) : null}
         <LoginForm />
       </CardContent>

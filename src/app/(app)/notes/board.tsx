@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState, type PointerEvent } from "react";
+import { ChevronUp, MessageCircle } from "lucide-react";
 import { emptyState } from "@/lib/form";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -190,17 +191,17 @@ function NoteBody({ note, onOpenComments }: { note: Note; onOpenComments: () => 
             <input type="hidden" name="noteId" value={note.id} />
             <button
               type="submit"
-              className={`rounded px-1.5 py-0.5 hover:bg-black/5 ${note.voted ? "font-semibold text-neutral-900" : ""}`}
+              className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 hover:bg-black/5 ${note.voted ? "font-semibold text-neutral-900" : ""}`}
             >
-              ▲ {note.votes}
+              <ChevronUp className="size-3.5" /> {note.votes}
             </button>
           </form>
           <button
             type="button"
             onClick={onOpenComments}
-            className="rounded px-1.5 py-0.5 hover:bg-black/5"
+            className="flex items-center gap-0.5 rounded px-1.5 py-0.5 hover:bg-black/5"
           >
-            💬 {note.comments.length}
+            <MessageCircle className="size-3.5" /> {note.comments.length}
           </button>
           {note.canDelete ? (
             <form action={deleteNoteAction}>

@@ -41,7 +41,7 @@ export default async function NotesPage() {
   return (
     <div className="grid gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Idea board</h1>
+        <h1 className="text-2xl font-bold tracking-tight uppercase">Idea board</h1>
         <p className="text-sm text-muted-foreground">
           A sticky-note wall for the leadership team. Drag to arrange, upvote the good ones,
           and comment to discuss.

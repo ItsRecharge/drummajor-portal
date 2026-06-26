@@ -18,7 +18,7 @@ export function UploadForm() {
         <input id="file" type="file" name="file" className="text-sm" />
       </div>
       {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
-      {state.message ? <p className="text-sm text-green-600">{state.message}</p> : null}
+      {state.message ? <p className="text-sm text-success">{state.message}</p> : null}
       <div>
         <SubmitButton pendingLabel="Uploading…">Upload</SubmitButton>
       </div>

@@ -55,7 +55,7 @@ export function PieceForm({
         </div>
       ) : null}
       {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
-      {state.message ? <p className="text-sm text-green-600">{state.message}</p> : null}
+      {state.message ? <p className="text-sm text-success">{state.message}</p> : null}
       <div>
         <SubmitButton pendingLabel="Saving…">{submitLabel}</SubmitButton>
       </div>

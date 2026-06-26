@@ -37,7 +37,7 @@ export default async function MusicPage({
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Music library</h1>
+          <h1 className="text-2xl font-bold tracking-tight uppercase">Music library</h1>
           <p className="text-sm text-muted-foreground">Search and manage the band&apos;s catalog.</p>
         </div>
         <Link href="/music/new" className={buttonVariants()}>

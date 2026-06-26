@@ -26,7 +26,7 @@ export function FileUploadForm({
         {label}
       </SubmitButton>
       {state.error ? <p className="w-full text-sm text-destructive">{state.error}</p> : null}
-      {state.message ? <p className="w-full text-sm text-green-600">{state.message}</p> : null}
+      {state.message ? <p className="w-full text-sm text-success">{state.message}</p> : null}
     </form>
   );
 }

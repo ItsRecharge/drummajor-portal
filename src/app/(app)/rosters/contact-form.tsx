@@ -18,7 +18,7 @@ export type EditableContact = {
 };
 
 function Result({ state }: { state: ActionState }) {
-  if (state.success) return <p className="text-sm text-green-600">{state.message}</p>;
+  if (state.success) return <p className="text-sm text-success">{state.message}</p>;
   if (state.error) return <p className="text-sm text-destructive">{state.error}</p>;
   return null;
 }

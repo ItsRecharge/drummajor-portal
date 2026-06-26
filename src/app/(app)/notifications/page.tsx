@@ -39,7 +39,7 @@ export default async function NotificationsPage() {
   return (
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Notifications</h1>
+        <h1 className="text-2xl font-bold tracking-tight uppercase">Notifications</h1>
         {hasUnread ? (
           <form action={markAllReadAction}>
             <Button type="submit" size="sm" variant="outline">

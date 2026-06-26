@@ -16,7 +16,7 @@ export default async function EventsPage() {
   return (
     <div className="grid gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Events</h1>
+        <h1 className="text-2xl font-bold tracking-tight uppercase">Events</h1>
         <p className="text-sm text-muted-foreground">Schedule rehearsals, competitions, and more.</p>
       </div>
 
