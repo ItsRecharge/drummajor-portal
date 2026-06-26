@@ -1,11 +1,18 @@
 "use client";
 
-import { useActionState, useRef, useState, type PointerEvent } from "react";
-import { ChevronUp, MessageCircle } from "lucide-react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+} from "react";
+import { ChevronUp, MessageCircle, Plus, X } from "lucide-react";
 import { emptyState } from "@/lib/form";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/submit-button";
 import {
   Dialog,
@@ -38,78 +45,100 @@ type Note = {
 
 const COLORS = ["#fff3a0", "#ffd1dc", "#cfe8ff", "#d7f5cc", "#e6d7ff", "#ffd8a8"];
 
+// Deterministic small tilt per note so the wall looks hand-pinned but stays put
+// across renders. Range roughly -5°..+5°, derived from the id.
+function rotationOf(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return Math.round((((Math.abs(h) % 100) / 10) - 5) * 10) / 10;
+}
+
 export function NoteBoard({ notes }: { notes: Note[] }) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const active = notes.find((n) => n.id === activeId) ?? null;
 
   return (
     <div className="grid gap-4">
-      <NewNoteForm />
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Drag notes anywhere. Vote and comment to surface the best ideas.
+        </p>
+        <Button type="button" size="sm" onClick={() => setAddOpen(true)}>
+          <Plus className="size-4" />
+          Add note
+        </Button>
+      </div>
 
       {notes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No ideas yet. Add the first one above.</p>
+        <div className="field-grid grid h-[60vh] min-h-[360px] place-items-center rounded-lg border border-border bg-card/30 text-center">
+          <p className="text-sm text-muted-foreground">
+            No ideas yet. Hit <span className="font-medium text-foreground">Add note</span> to pin the first one.
+          </p>
+        </div>
       ) : (
-        <>
-          {/* Desktop: draggable Post-it wall. */}
-          <DraggableBoard notes={notes} onOpenComments={setActiveId} />
-          {/* Mobile: scrollable card list (no drag). */}
-          <div className="grid gap-3 md:hidden">
-            {notes.map((n) => (
-              <div key={n.id} className="rounded-md p-3 shadow-sm" style={{ backgroundColor: n.color }}>
-                <NoteBody note={n} onOpenComments={() => setActiveId(n.id)} />
-              </div>
-            ))}
-          </div>
-        </>
+        <DraggableBoard notes={notes} onOpenComments={setActiveId} />
       )}
 
-      <Dialog open={!!active} onOpenChange={(open) => !open && setActiveId(null)}>
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
-          {active ? <CommentThread note={active} /> : null}
+          <DialogHeader>
+            <DialogTitle>New idea</DialogTitle>
+          </DialogHeader>
+          <NewNoteForm onAdded={() => setAddOpen(false)} />
         </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!active} onOpenChange={(open) => !open && setActiveId(null)}>
+        <DialogContent>{active ? <CommentThread note={active} /> : null}</DialogContent>
       </Dialog>
     </div>
   );
 }
 
-function NewNoteForm() {
+function NewNoteForm({ onAdded }: { onAdded: () => void }) {
   const [state, formAction] = useActionState(createNoteAction, emptyState);
   const [color, setColor] = useState(COLORS[0]);
+
+  useEffect(() => {
+    if (state.success) onAdded();
+  }, [state, onAdded]);
+
   return (
-    <form action={formAction} className="grid gap-3 rounded-lg border p-4">
+    <form action={formAction} className="grid gap-3">
       <input type="hidden" name="color" value={color} />
       <div className="grid gap-1.5">
-        <Label htmlFor="text">New idea</Label>
-        <Textarea id="text" name="text" rows={2} placeholder="What's on your mind?" />
+        <Label htmlFor="text">Idea</Label>
+        <Textarea id="text" name="text" rows={3} placeholder="What's on your mind?" />
         {state.fieldErrors?.text ? (
           <p className="text-sm text-destructive">{state.fieldErrors.text}</p>
         ) : null}
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1.5">
-          {COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setColor(c)}
-              aria-label={`Color ${c}`}
-              className={`h-6 w-6 rounded-full border ${color === c ? "ring-2 ring-foreground ring-offset-1" : ""}`}
-              style={{ backgroundColor: c }}
-            />
-          ))}
-        </div>
-        <input
-          name="category"
-          placeholder="Category (optional)"
-          className="h-9 w-48 rounded-md border bg-transparent px-3 text-sm"
-        />
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="anonymous" />
-          Hide my name
-        </label>
+      <div className="flex items-center gap-1.5">
+        {COLORS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setColor(c)}
+            aria-label={`Color ${c}`}
+            className={`size-7 rounded-full border transition ${color === c ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" : ""}`}
+            style={{ backgroundColor: c }}
+          />
+        ))}
+      </div>
+      <input
+        name="category"
+        placeholder="Category (optional)"
+        className="h-9 rounded-md border bg-transparent px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+      />
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="anonymous" />
+        Hide my name
+      </label>
+      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
+      <div className="flex justify-end">
         <SubmitButton pendingLabel="Adding…">Add note</SubmitButton>
       </div>
-      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
     </form>
   );
 }
@@ -155,7 +184,7 @@ function DraggableBoard({
   }
 
   return (
-    <div className="relative hidden h-[600px] w-full overflow-hidden rounded-lg border bg-muted/30 md:block">
+    <div className="field-grid relative h-[68vh] min-h-[440px] w-full touch-pan-y overflow-hidden rounded-lg border border-border bg-card/30">
       {notes.map((n) => {
         const pos = posOf(n);
         return (
@@ -164,9 +193,18 @@ function DraggableBoard({
             onPointerDown={(e) => onPointerDown(e, n)}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className="absolute w-56 cursor-grab touch-none rounded-md p-3 shadow-md active:cursor-grabbing"
-            style={{ left: pos.x, top: pos.y, backgroundColor: n.color }}
+            style={
+              {
+                left: pos.x,
+                top: pos.y,
+                backgroundColor: n.color,
+                "--rot": `${rotationOf(n.id)}deg`,
+              } as React.CSSProperties
+            }
+            className="group absolute w-52 cursor-grab touch-none p-3.5 text-neutral-900 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.45)] transition-transform duration-150 [transform:rotate(var(--rot))] hover:z-10 hover:[transform:rotate(0deg)_scale(1.03)] active:cursor-grabbing active:[transform:rotate(0deg)_scale(1.03)]"
           >
+            {/* A strip of "tape" pinning the note to the wall. */}
+            <span className="pointer-events-none absolute -top-2.5 left-1/2 h-5 w-14 -translate-x-1/2 -rotate-3 bg-white/35 shadow-sm ring-1 ring-black/5" />
             <NoteBody note={n} onOpenComments={() => onOpenComments(n.id)} />
           </div>
         );
@@ -178,14 +216,14 @@ function DraggableBoard({
 function NoteBody({ note, onOpenComments }: { note: Note; onOpenComments: () => void }) {
   return (
     <div className="grid gap-2 text-sm text-neutral-900">
-      <p className="whitespace-pre-wrap break-words">{note.text}</p>
+      <p className="break-words whitespace-pre-wrap">{note.text}</p>
       {note.category ? (
         <Badge variant="outline" className="w-fit border-neutral-400/60 text-neutral-700">
           {note.category}
         </Badge>
       ) : null}
       <div className="flex items-center justify-between text-xs text-neutral-600">
-        <span>{note.authorName ?? "Anonymous"}</span>
+        <span className="truncate">{note.authorName ?? "Anonymous"}</span>
         <div className="flex items-center gap-1" data-no-drag>
           <form action={toggleVoteAction}>
             <input type="hidden" name="noteId" value={note.id} />
@@ -206,8 +244,8 @@ function NoteBody({ note, onOpenComments }: { note: Note; onOpenComments: () => 
           {note.canDelete ? (
             <form action={deleteNoteAction}>
               <input type="hidden" name="noteId" value={note.id} />
-              <button type="submit" className="rounded px-1.5 py-0.5 hover:bg-black/5">
-                ✕
+              <button type="submit" aria-label="Delete note" className="rounded px-1 py-0.5 hover:bg-black/5">
+                <X className="size-3.5" />
               </button>
             </form>
           ) : null}

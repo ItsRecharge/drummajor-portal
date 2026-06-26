@@ -166,17 +166,3 @@ export const handoffNoteSchema = z.object({
   bodyHtml: z.string().trim().min(1, "Write something"),
 });
 
-export const vaultDocumentSchema = z.object({
-  title: z.string().trim().min(1, "Required"),
-  category: z.string().optional(),
-});
-
-export const musicPieceSchema = z.object({
-  title: z.string().trim().min(1, "Required"),
-  composer: z.string().optional(),
-  arranger: z.string().optional(),
-  ensemble: z.string().optional(),
-  notes: z.string().optional(),
-  // Comma-separated in the form; the action splits to a string[].
-  tags: z.string().optional(),
-});

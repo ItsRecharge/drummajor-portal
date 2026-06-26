@@ -3,10 +3,8 @@ import { AnnouncementStatus } from "@/generated/prisma/client";
 import { getSmtpConfig, buildTransport, fromHeader, announcementEmail, appBaseUrl } from "@/lib/email";
 import { randomToken, isExpired } from "@/lib/tokens";
 import { resolveGroupMemberIds } from "@/lib/groups";
-import { getFileBuffer, shareAnyoneWithLink, isDriveConfigured } from "@/lib/drive";
+import { shareAnyoneWithLink, isDriveConfigured } from "@/lib/drive";
 
-// Gmail rejects single messages over ~25MB; above that we link instead of attach.
-const GMAIL_ATTACH_LIMIT = 25 * 1024 * 1024;
 // How many recipients to send per scheduler tick. With a 1-minute tick this paces
 // delivery (a full ~150-person send finishes over a few minutes) and stays well
 // under Gmail's per-message throttling.
@@ -88,33 +86,24 @@ type MusicAttachments = {
   linksHtml: string;
 };
 
-// For each attached piece's files: small ones ride along as Gmail attachments;
-// large ones become shared Drive links. No-ops cleanly when Drive isn't configured.
+// Each attached Library item (usually a folder of music) becomes a shared Drive
+// link in the email. No-ops cleanly when Drive isn't configured.
 async function buildMusicAttachments(announcementId: string): Promise<MusicAttachments> {
   const links = await prisma.announcementMusic.findMany({
     where: { announcementId },
-    include: { musicPiece: { include: { files: true } } },
+    include: { libraryItem: { select: { name: true, driveId: true, webViewLink: true } } },
   });
   const result: MusicAttachments = { files: [], linksHtml: "" };
   if (links.length === 0 || !(await isDriveConfigured())) return result;
 
   const linkItems: string[] = [];
-  for (const { musicPiece } of links) {
-    for (const file of musicPiece.files) {
-      const small = file.sizeBytes != null && Number(file.sizeBytes) < GMAIL_ATTACH_LIMIT;
-      try {
-        if (small) {
-          const { buffer } = await getFileBuffer(file.driveFileId);
-          result.files.push({ filename: file.filename, content: buffer });
-        } else {
-          const url = await shareAnyoneWithLink(file.driveFileId);
-          linkItems.push(
-            `<li><a href="${url}">${musicPiece.title} — ${file.filename}</a></li>`,
-          );
-        }
-      } catch {
-        // Skip a file we can't fetch/share rather than failing the whole send.
-      }
+  for (const { libraryItem } of links) {
+    if (!libraryItem.driveId) continue;
+    try {
+      const url = libraryItem.webViewLink ?? (await shareAnyoneWithLink(libraryItem.driveId));
+      linkItems.push(`<li><a href="${url}">${libraryItem.name}</a></li>`);
+    } catch {
+      // Skip an item we can't share rather than failing the whole send.
     }
   }
   if (linkItems.length > 0) result.linksHtml = `<ul>${linkItems.join("")}</ul>`;

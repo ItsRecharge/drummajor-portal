@@ -26,7 +26,7 @@ export default async function HandoffPage() {
       include: { author: { select: { name: true } } },
     }),
     prisma.announcement.count(),
-    prisma.musicPiece.count(),
+    prisma.libraryItem.count({ where: { type: "FILE" } }),
     prisma.event.count(),
   ]);
 
@@ -65,8 +65,8 @@ export default async function HandoffPage() {
           <Link href="/announcements" className="rounded-md border px-3 py-1.5 hover:bg-accent/40">
             {announcements} announcement(s)
           </Link>
-          <Link href="/music" className="rounded-md border px-3 py-1.5 hover:bg-accent/40">
-            {music} piece(s) of music
+          <Link href="/library" className="rounded-md border px-3 py-1.5 hover:bg-accent/40">
+            {music} file(s) in the library
           </Link>
           <Link href="/events" className="rounded-md border px-3 py-1.5 hover:bg-accent/40">
             {events} event(s)

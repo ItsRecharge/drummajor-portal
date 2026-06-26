@@ -11,13 +11,17 @@ export default async function NewAnnouncementPage() {
   await requireRole(Role.ADMIN, Role.DRUM_MAJOR);
   await ensureBuiltInGroups();
 
-  const [groupsRaw, totalContacts, music, templates] = await Promise.all([
+  const [groupsRaw, totalContacts, folders, templates] = await Promise.all([
     prisma.group.findMany({
       orderBy: [{ builtIn: "desc" }, { name: "asc" }],
       include: { _count: { select: { contacts: true } } },
     }),
     prisma.contact.count(),
-    prisma.musicPiece.findMany({ orderBy: { title: "asc" }, select: { id: true, title: true } }),
+    prisma.libraryItem.findMany({
+      where: { type: "FOLDER" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
     prisma.announcementTemplate.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true, subject: true, bodyHtml: true },
@@ -39,7 +43,11 @@ export default async function NewAnnouncementPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Composer groups={groups} music={music} templates={templates} />
+        <Composer
+          groups={groups}
+          music={folders.map((f) => ({ id: f.id, title: f.name }))}
+          templates={templates}
+        />
       </CardContent>
     </Card>
   );

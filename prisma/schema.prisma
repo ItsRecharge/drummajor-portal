@@ -75,7 +75,7 @@ model User {
   notes             Note[]
   noteVotes         NoteVote[]
   noteComments      NoteComment[]
-  vaultUploads      VaultDocument[]
+  libraryUploads    LibraryItem[]
   handoffNotes      HandoffNote[]
   notifications     Notification[]
   auditEntries      AuditLog[]
@@ -209,13 +209,14 @@ model AnnouncementRecipientGroup {
   @@id([announcementId, groupId])
 }
 
+// Attaches a Library folder/file to an announcement; recipients get its Drive link.
 model AnnouncementMusic {
   announcementId String
-  musicPieceId   String
+  libraryItemId  String
   announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  musicPiece     MusicPiece   @relation(fields: [musicPieceId], references: [id], onDelete: Cascade)
+  libraryItem    LibraryItem  @relation(fields: [libraryItemId], references: [id], onDelete: Cascade)
 
-  @@id([announcementId, musicPieceId])
+  @@id([announcementId, libraryItemId])
 }
 
 // Per-recipient delivery record; powers the open-tracking pixel + counts.
@@ -242,36 +243,47 @@ model AnnouncementTemplate {
 }
 
 // ---------------------------------------------------------------------------
-// Music library (Google Drive-backed)
+// Library (unified Google Drive-backed file browser; merges Music + Vault)
 // ---------------------------------------------------------------------------
 
-model MusicPiece {
-  id           String   @id @default(cuid())
-  title        String
-  composer     String?
-  arranger     String?
-  ensemble     String?
-  tags         String[]
-  notes        String?
-  driveFolderId String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  files            MusicFile[]
-  announcementLinks AnnouncementMusic[]
+enum LibraryItemType {
+  FOLDER
+  FILE
 }
 
-model MusicFile {
-  id           String   @id @default(cuid())
-  musicPieceId String
-  musicPiece   MusicPiece @relation(fields: [musicPieceId], references: [id], onDelete: Cascade)
-  filename     String
-  driveFileId  String
-  sizeBytes    BigInt?
-  version      Int      @default(1)
-  createdAt    DateTime @default(now())
+// Write-back cache state: PENDING = staged locally, not yet on Drive.
+enum SyncState {
+  PENDING
+  SYNCED
+  ERROR
+}
 
-  @@index([musicPieceId])
+// One self-referential tree of folders and files. The DB is the source of
+// truth for browsing; files are stored in Google Drive and opened via webViewLink.
+model LibraryItem {
+  id           String          @id @default(cuid())
+  name         String
+  type         LibraryItemType
+  parentId     String?
+  parent       LibraryItem?    @relation("Tree", fields: [parentId], references: [id], onDelete: Cascade)
+  children     LibraryItem[]   @relation("Tree")
+  driveId      String?
+  webViewLink  String?
+  mimeType     String?
+  sizeBytes    BigInt?
+  note         String?
+  syncState    SyncState       @default(PENDING)
+  syncError    String?
+  stagedPath   String?
+  uploadedById String?
+  uploadedBy   User?           @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  announcementLinks AnnouncementMusic[]
+
+  @@index([parentId])
+  @@index([syncState])
 }
 
 // ---------------------------------------------------------------------------
@@ -342,22 +354,6 @@ model NoteComment {
   author    User     @relation(fields: [authorId], references: [id])
   text      String
   createdAt DateTime @default(now())
-}
-
-// ---------------------------------------------------------------------------
-// Document vault
-// ---------------------------------------------------------------------------
-
-model VaultDocument {
-  id           String   @id @default(cuid())
-  title        String
-  category     String?
-  driveFileId  String
-  filename     String
-  uploadedById String?
-  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 }
 
 // Stage 9 — leadership handoff: year-over-year "what worked / didn't / tips"

@@ -59,7 +59,7 @@ async function upsertDraft(
   await prisma.announcementMusic.deleteMany({ where: { announcementId } });
   if (musicIds.length > 0) {
     await prisma.announcementMusic.createMany({
-      data: musicIds.map((musicPieceId) => ({ announcementId, musicPieceId })),
+      data: musicIds.map((libraryItemId) => ({ announcementId, libraryItemId })),
       skipDuplicates: true,
     });
   }

@@ -6,11 +6,10 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Megaphone,
-  Music,
+  FolderOpen,
   CalendarDays,
   ListChecks,
   Lightbulb,
-  Vault,
   Flag,
   Menu,
   X,
@@ -33,12 +32,11 @@ export function AppSidebar({
   // Main daily-use destinations only. Niche/admin items live in the user menu.
   const items: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: true },
-    { href: "/announcements", label: "Announcements", icon: Megaphone, show: canInvite },
-    { href: "/music", label: "Music", icon: Music, show: canMusic },
+    { href: "/announcements", label: "Email Announcements", icon: Megaphone, show: canInvite },
+    { href: "/library", label: "Library", icon: FolderOpen, show: canMusic },
     { href: "/events", label: "Events", icon: CalendarDays, show: canInvite },
     { href: "/tasks", label: "Tasks", icon: ListChecks, show: canInvite },
     { href: "/notes", label: "Ideas", icon: Lightbulb, show: canInvite },
-    { href: "/vault", label: "Vault", icon: Vault, show: canInvite },
     { href: "/handoff", label: "Handoff", icon: Flag, show: canInvite },
   ].filter((i) => i.show);
 

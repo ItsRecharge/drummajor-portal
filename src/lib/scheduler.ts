@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { processQueue } from "@/lib/announce";
+import { processPendingItems } from "@/lib/library-sync";
 
 // In-process scheduler. Under `next start` (single self-hosted instance — the
 // deployment model) this polls the DB-backed announcement queue every minute.
@@ -11,6 +12,9 @@ export function startScheduler(): void {
   started = true;
   cron.schedule("* * * * *", () => {
     processQueue().catch((err) => console.error("[scheduler] processQueue failed:", err));
+    processPendingItems().catch((err) =>
+      console.error("[scheduler] library sync failed:", err),
+    );
   });
-  console.log("[scheduler] announcement queue worker started");
+  console.log("[scheduler] announcement queue + library sync workers started");
 }

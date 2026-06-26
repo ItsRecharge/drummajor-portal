@@ -22,7 +22,7 @@ export default async function AnnouncementDetailPage({
     include: {
       author: { select: { name: true } },
       recipientGroups: { include: { group: { select: { name: true } } } },
-      musicAttachments: { include: { musicPiece: { select: { title: true } } } },
+      musicAttachments: { include: { libraryItem: { select: { name: true } } } },
     },
   });
   if (!ann) notFound();
@@ -74,7 +74,7 @@ export default async function AnnouncementDetailPage({
           </p>
           {ann.musicAttachments.length > 0 ? (
             <p className="text-muted-foreground">
-              Music: {ann.musicAttachments.map((m) => m.musicPiece.title).join(", ")}
+              Files: {ann.musicAttachments.map((m) => m.libraryItem.name).join(", ")}
             </p>
           ) : null}
           {ann.scheduledAt ? (

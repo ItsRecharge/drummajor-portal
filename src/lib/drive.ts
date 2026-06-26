@@ -166,3 +166,61 @@ export async function shareWithUser(fileId: string, email: string): Promise<void
     supportsAllDrives: true,
   });
 }
+
+// Fetch a file/folder's shareable webViewLink (without changing permissions).
+// Used to lazily backfill links for items migrated from the old Music/Vault tables.
+export async function getWebViewLink(fileId: string): Promise<string> {
+  const drive = await getDrive();
+  const res = await drive.files.get({
+    fileId,
+    fields: "webViewLink",
+    supportsAllDrives: true,
+  });
+  return res.data.webViewLink ?? `https://drive.google.com/file/d/${fileId}/view`;
+}
+
+// Permanently delete a Drive file or folder (folders delete their contents too).
+export async function deleteDriveItem(fileId: string): Promise<void> {
+  const drive = await getDrive();
+  await drive.files.delete({ fileId, supportsAllDrives: true });
+}
+
+export type DriveChild = {
+  driveId: string;
+  name: string;
+  isFolder: boolean;
+  mimeType: string;
+  webViewLink: string | null;
+  sizeBytes: number | null;
+};
+
+// List the immediate children of a Drive folder, for the "Refresh from Drive"
+// reconcile. Pages through all results.
+export async function listFolderChildren(folderId: string): Promise<DriveChild[]> {
+  const drive = await getDrive();
+  const out: DriveChild[] = [];
+  let pageToken: string | undefined;
+  do {
+    const res = await drive.files.list({
+      q: `'${folderId}' in parents and trashed = false`,
+      fields: "nextPageToken, files(id, name, mimeType, webViewLink, size)",
+      pageSize: 200,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      pageToken,
+    });
+    for (const f of res.data.files ?? []) {
+      const isFolder = f.mimeType === "application/vnd.google-apps.folder";
+      out.push({
+        driveId: f.id!,
+        name: f.name ?? "Untitled",
+        isFolder,
+        mimeType: f.mimeType ?? "application/octet-stream",
+        webViewLink: f.webViewLink ?? null,
+        sizeBytes: f.size ? Number(f.size) : null,
+      });
+    }
+    pageToken = res.data.nextPageToken ?? undefined;
+  } while (pageToken);
+  return out;
+}

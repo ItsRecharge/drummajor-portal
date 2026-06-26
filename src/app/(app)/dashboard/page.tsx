@@ -17,7 +17,12 @@ export default async function DashboardPage() {
     await Promise.all([
       prisma.event.findMany({ where: { date: { gte: now } }, orderBy: { date: "asc" }, take: 5 }),
       prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
-      prisma.musicPiece.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
+      prisma.libraryItem.findMany({
+        where: { type: "FILE" },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: { id: true, name: true },
+      }),
       prisma.task.findMany({
         where: { assigneeId: user.id, status: { not: TaskStatus.COMPLETED } },
         orderBy: { createdAt: "asc" },
@@ -114,7 +119,7 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
               <Music className="size-4 text-primary" />
-              New music
+              Recent files
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-1.5 text-sm">
@@ -122,8 +127,8 @@ export default async function DashboardPage() {
               <CardDescription>None yet.</CardDescription>
             ) : (
               music.map((m) => (
-                <Link key={m.id} href={`/music/${m.id}`} className="truncate hover:underline">
-                  {m.title}
+                <Link key={m.id} href={`/library/${m.id}`} className="truncate hover:underline">
+                  {m.name}
                 </Link>
               ))
             )}

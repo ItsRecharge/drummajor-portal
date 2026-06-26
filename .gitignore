@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Local dev PGlite database
 .pglite/
+
+# Library write-back cache staging files
+.staging/
