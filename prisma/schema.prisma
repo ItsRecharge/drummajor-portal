@@ -242,6 +242,16 @@ model AnnouncementTemplate {
   updatedAt DateTime @updatedAt
 }
 
+// Uploaded inline images for announcement bodies, served publicly at /i/[id].
+// Public by design: email recipients load them unauthenticated; the random cuid
+// is the only handle (same trust model as the tracking pixel).
+model EmailImage {
+  id        String   @id @default(cuid())
+  mime      String
+  data      Bytes
+  createdAt DateTime @default(now())
+}
+
 // ---------------------------------------------------------------------------
 // Library (unified Google Drive-backed file browser; merges Music + Vault)
 // ---------------------------------------------------------------------------
