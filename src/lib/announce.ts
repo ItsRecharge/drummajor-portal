@@ -4,6 +4,7 @@ import { getSmtpConfig, buildTransport, fromHeader, announcementEmail, appBaseUr
 import { randomToken, isExpired } from "@/lib/tokens";
 import { resolveGroupMemberIds } from "@/lib/groups";
 import { shareAnyoneWithLink, isDriveConfigured } from "@/lib/drive";
+import { absolutizeImageSrc } from "@/lib/sanitize";
 
 // How many recipients to send per scheduler tick. With a 1-minute tick this paces
 // delivery (a full ~150-person send finishes over a few minutes) and stays well
@@ -158,7 +159,7 @@ export async function processQueue(): Promise<void> {
     for (const d of pending) {
       try {
         const html = announcementEmail({
-          bodyHtml: ann.bodyHtml,
+          bodyHtml: absolutizeImageSrc(ann.bodyHtml, appBaseUrl()),
           pixelUrl: `${appBaseUrl()}/t/${d.trackingToken}.gif`,
           linksHtml: music.linksHtml,
         });

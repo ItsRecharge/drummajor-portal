@@ -44,7 +44,7 @@ export function announcementEmail(opts: {
   linksHtml?: string;
 }): string {
   const links = opts.linksHtml
-    ? `<hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0" /><p style="font-weight:600;margin:0 0 8px">Attached music</p>${opts.linksHtml}`
+    ? `<hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0" /><p style="font-weight:600;margin:0 0 8px">🎵 Music</p>${opts.linksHtml}`
     : "";
   const pixel = `<img src="${opts.pixelUrl}" width="1" height="1" alt="" style="display:none" />`;
   return `<div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#171717">
