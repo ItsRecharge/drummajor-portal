@@ -52,6 +52,12 @@ export function MusicPicker({ options }: { options: MusicOption[] }) {
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (matches[0]) add(matches[0]);
+            }
+          }}
           placeholder="Search the library…"
           aria-label="Search music"
         />
