@@ -30,6 +30,20 @@ test("existing formatting tags still pass", () => {
   assert.equal(sanitizeHtml("<p><b>bold</b> and <i>italic</i></p>"), "<p><b>bold</b> and <i>italic</i></p>");
 });
 
+test("ignores lookalike attributes before the real src", () => {
+  assert.equal(
+    sanitizeHtml('<img xsrc="https://evil.example/x.png" src="/i/legit">'),
+    '<img src="/i/legit" style="max-width:100%" />',
+  );
+});
+
+test("ignores lookalike attributes before the real href", () => {
+  assert.equal(
+    sanitizeHtml('<a data-href="https://evil.example" href="https://good.example">x</a>'),
+    '<a href="https://good.example" target="_blank" rel="noopener noreferrer">x</a>',
+  );
+});
+
 test("absolutizeImageSrc rewrites only app-relative /i/ srcs", () => {
   assert.equal(
     absolutizeImageSrc(
