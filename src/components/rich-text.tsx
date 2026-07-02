@@ -54,9 +54,17 @@ export function RichText({
 
   function restoreSelection() {
     const sel = window.getSelection();
-    if (savedRange.current && sel) {
-      sel.removeAllRanges();
-      sel.addRange(savedRange.current);
+    if (!sel || !ref.current) return;
+    const range = savedRange.current;
+    sel.removeAllRanges();
+    if (range && ref.current.contains(range.startContainer) && ref.current.contains(range.endContainer)) {
+      sel.addRange(range);
+    } else {
+      // No usable caret (editor never focused, or nodes edited away) — append at end.
+      const r = document.createRange();
+      r.selectNodeContents(ref.current);
+      r.collapse(false);
+      sel.addRange(r);
     }
   }
 
@@ -74,6 +82,7 @@ export function RichText({
       }
       restoreSelection();
       exec("insertImage", res.url);
+      savedRange.current = null;
     } catch {
       setUploadError("Upload failed.");
     } finally {
@@ -134,7 +143,7 @@ export function RichText({
         className="min-h-40 rounded-md border bg-transparent px-3 py-2 text-sm focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [&_img]:max-w-full"
         dangerouslySetInnerHTML={{ __html: defaultValue }}
       />
-      {uploadError ? <p className="text-sm text-destructive">{uploadError}</p> : null}
+      {uploadError ? <p role="alert" className="text-sm text-destructive">{uploadError}</p> : null}
       <input type="hidden" name={name} value={html} />
     </div>
   );
