@@ -134,3 +134,22 @@ export async function saveTemplateAction(_prev: ActionState, formData: FormData)
   revalidatePath("/announcements/new");
   return { success: true, message: "Template saved." };
 }
+
+const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+// Stores an uploaded body image and returns its app-relative URL for the editor.
+// The sanitizer only admits "/i/" and https img srcs, so this is the sole path
+// for getting an uploaded image into an announcement.
+export async function uploadImageAction(
+  formData: FormData,
+): Promise<{ url: string } | { error: string }> {
+  await requireRole(...COMPOSE_ROLES);
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "No file selected." };
+  if (!IMAGE_MIMES.has(file.type)) return { error: "Use a PNG, JPEG, GIF, or WebP image." };
+  if (file.size > MAX_IMAGE_BYTES) return { error: "Image must be 4 MB or smaller." };
+  const data = new Uint8Array(await file.arrayBuffer());
+  const img = await prisma.emailImage.create({ data: { mime: file.type, data } });
+  return { url: `/i/${img.id}` };
+}
