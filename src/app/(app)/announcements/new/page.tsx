@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { ensureBuiltInGroups, EVERYONE } from "@/lib/groups";
+import { ensureDefaultTemplates } from "@/lib/announcement-templates";
 import { Role } from "@/generated/prisma/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Composer, type GroupOption } from "../composer";
@@ -10,6 +11,7 @@ export const metadata = { title: "New announcement — Drum Major Portal" };
 export default async function NewAnnouncementPage() {
   await requireRole(Role.ADMIN, Role.DRUM_MAJOR);
   await ensureBuiltInGroups();
+  await ensureDefaultTemplates().catch(() => {});
 
   const [groupsRaw, totalContacts, folders, templates] = await Promise.all([
     prisma.group.findMany({
