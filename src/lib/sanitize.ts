@@ -5,7 +5,7 @@
 // attribute except a safe href on <a>.
 
 const ALLOWED = new Set([
-  "b", "strong", "i", "em", "u", "p", "br", "ul", "ol", "li", "a", "h3", "h4", "blockquote",
+  "b", "strong", "i", "em", "u", "p", "br", "ul", "ol", "li", "a", "h3", "h4", "blockquote", "img",
 ]);
 
 function escapeAttr(value: string): string {
@@ -24,6 +24,14 @@ function safeHref(attrs: string): string | null {
   return null;
 }
 
+function safeSrc(attrs: string): string | null {
+  const m = attrs.match(/src\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  if (!m) return null;
+  const val = (m[2] ?? m[3] ?? m[4] ?? "").trim();
+  if (/^(https:|\/i\/)/i.test(val)) return escapeAttr(val);
+  return null;
+}
+
 export function sanitizeHtml(input: string): string {
   if (!input) return "";
   // Strip dangerous elements together with their content.
@@ -38,6 +46,11 @@ export function sanitizeHtml(input: string): string {
   html = html.replace(/<(\/?)([a-zA-Z0-9]+)([^>]*)>/g, (_m, slash: string, rawName: string, attrs: string) => {
     const name = rawName.toLowerCase();
     if (!ALLOWED.has(name)) return "";
+    if (name === "img") {
+      if (slash === "/") return "";
+      const src = safeSrc(attrs);
+      return src ? `<img src="${src}" style="max-width:100%" />` : "";
+    }
     if (slash === "/") return `</${name}>`;
     if (name === "a") {
       const href = safeHref(attrs);
@@ -47,4 +60,12 @@ export function sanitizeHtml(input: string): string {
   });
 
   return html.trim();
+}
+
+// Rewrite app-relative inline-image srcs ("/i/<id>") to absolute URLs so emails
+// composed against localhost or an old domain always use the base URL current at
+// send time. https srcs pass through untouched.
+export function absolutizeImageSrc(html: string, baseUrl: string): string {
+  const base = baseUrl.replace(/\/$/, "");
+  return html.replace(/src="\/i\//g, `src="${base}/i/`);
 }
