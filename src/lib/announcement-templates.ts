@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 // template dropdown is useful out of the box. Users edit the loaded copy per-send;
 // new templates come from the composer's "Save as template" button. Seeding only
 // on empty means we never resurrect templates the user has since deleted.
+// Note: count-then-insert is not atomic; a rare double-load race could double-seed.
+// Acceptable at this scale (a handful of staff, one-time first-load window) — not worth a transaction.
 const DEFAULT_TEMPLATES = [
   {
     name: "Rehearsal Reminder",
