@@ -50,6 +50,7 @@ export function Composer({
   }
 
   return (
+    // Do not add onSubmit here — SaveTemplateDialog renders a portaled <form> whose submit events bubble through the React tree, not the DOM.
     <form action={formAction} className="grid gap-5">
       {templates.length > 0 ? (
         <div className="grid gap-1.5">
@@ -76,7 +77,7 @@ export function Composer({
           {groups.map((g) => (
             <label
               key={g.id}
-              className="cursor-pointer rounded-full border px-3 py-1 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground"
+              className="cursor-pointer rounded-full border px-3 py-1 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2"
             >
               <input type="checkbox" name="groupIds" value={g.id} className="sr-only" />
               {g.name} ({g.count})

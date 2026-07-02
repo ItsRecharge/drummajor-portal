@@ -10,7 +10,6 @@ import { saveTemplateAction } from "./actions";
 // Saves the composer's current subject/body as a named reusable template.
 export function SaveTemplateDialog({ subject, bodyHtml }: { subject: string; bodyHtml: string }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(saveTemplateAction, emptyState);
 
   return (
     <>
@@ -19,30 +18,41 @@ export function SaveTemplateDialog({ subject, bodyHtml }: { subject: string; bod
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <form action={formAction} className="grid gap-4">
-            <DialogHeader>
-              <DialogTitle>Save as template</DialogTitle>
-            </DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              Saves the current subject and message so you can start from them next time.
-            </p>
-            <Field
-              label="Template name"
-              name="templateName"
-              error={state.fieldErrors?.templateName}
-              required
-            />
-            <input type="hidden" name="subject" value={subject} />
-            <input type="hidden" name="bodyHtml" value={bodyHtml} />
-            {state.success ? (
-              <p className="text-sm text-muted-foreground">{state.message}</p>
-            ) : null}
-            <Button type="submit" disabled={pending}>
-              {pending ? "Saving…" : "Save template"}
-            </Button>
-          </form>
+          {/* The form (and its useActionState) lives in a child that only mounts
+              while the dialog is open, so each reopen starts with fresh state —
+              no stale "Template saved." banner from a previous save. */}
+          {open ? <SaveTemplateForm subject={subject} bodyHtml={bodyHtml} /> : null}
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function SaveTemplateForm({ subject, bodyHtml }: { subject: string; bodyHtml: string }) {
+  const [state, formAction, pending] = useActionState(saveTemplateAction, emptyState);
+
+  return (
+    <form action={formAction} className="grid gap-4">
+      <DialogHeader>
+        <DialogTitle>Save as template</DialogTitle>
+      </DialogHeader>
+      <p className="text-sm text-muted-foreground">
+        Saves the current subject and message so you can start from them next time.
+      </p>
+      <Field
+        label="Template name"
+        name="templateName"
+        error={state.fieldErrors?.templateName}
+        required
+      />
+      <input type="hidden" name="subject" value={subject} />
+      <input type="hidden" name="bodyHtml" value={bodyHtml} />
+      {state.success ? (
+        <p className="text-sm text-muted-foreground">{state.message}</p>
+      ) : null}
+      <Button type="submit" disabled={pending}>
+        {pending ? "Saving…" : "Save template"}
+      </Button>
+    </form>
   );
 }
