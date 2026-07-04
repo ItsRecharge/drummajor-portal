@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drum Major Portal — Interactive Demo</title>
+<meta name="description" content="Interactive demo of the Drum Major Portal with example data. Nothing is saved.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A1626; --panel:#0E1B2E; --card:#101D30; --line:#1E2C44;
+  --gold:#D9B44A; --gold-dim:#A8873A; --ink:#E8ECF4; --muted:#8FA1B8;
+  --green:#4CC38A; --red:#E5636F;
+}
+*{box-sizing:border-box;margin:0}
+html{overflow-x:clip}
+body{font:16px/1.55 "Source Sans 3",sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh;display:flex;flex-direction:column;overflow-x:clip}
+button{font:inherit;cursor:pointer}
+a{color:var(--gold)}
+h1,h2,h3,.disp{font-family:Oswald,sans-serif;text-transform:uppercase;letter-spacing:.04em}
+.demo-banner{background:#050B14;color:#C7D2E2;font-size:.85rem;padding:.55rem 1rem;display:flex;gap:.9rem;align-items:center;justify-content:center;flex-wrap:wrap;text-align:center;border-bottom:1px solid var(--line)}
+.demo-banner strong{color:var(--gold);letter-spacing:.06em}
+.demo-banner a{color:#7FB3E8}
+.shell{display:flex;flex:1;min-height:0}
+/* sidebar with faint staff lines */
+.sidebar{width:230px;flex-shrink:0;background:
+  repeating-linear-gradient(90deg, transparent 0 39px, rgba(216,180,74,.05) 39px 40px), var(--panel);
+  border-right:1px solid var(--line);padding:1.2rem 0;display:flex;flex-direction:column;gap:.15rem}
+.brand{display:flex;gap:.6rem;align-items:center;padding:0 1.1rem 1.1rem}
+.brand .flag{width:34px;height:34px;border-radius:8px;background:var(--gold);color:#0A1626;display:grid;place-items:center;font-weight:700;font-family:Oswald}
+.brand div span{display:block;font-family:Oswald;font-weight:600;letter-spacing:.08em;font-size:.85rem;line-height:1.25}
+.brand div span+span{color:var(--muted);font-size:.68rem;letter-spacing:.22em}
+.sidebar nav{display:flex;flex-direction:column}
+.sidebar nav button{background:none;border:0;border-left:3px solid transparent;color:var(--muted);text-align:left;padding:.65rem 1.1rem;font-size:.95rem}
+.sidebar nav button:hover{color:var(--ink);background:rgba(255,255,255,.03)}
+.sidebar nav button.on{color:var(--ink);background:#16253C;border-left-color:var(--gold);font-weight:600}
+.sidebar .foot{margin-top:auto;padding:1rem 1.1rem 0;color:var(--muted);font-size:.78rem;border-top:1px solid var(--line)}
+main{flex:1;min-width:0;padding:2rem 2rem 3rem;max-width:1180px}
+.crumb{color:var(--gold);font-family:Oswald;font-size:.72rem;letter-spacing:.28em;margin-bottom:.3rem}
+h1{font-size:1.7rem;margin-bottom:.2rem}
+.sub{color:var(--muted);margin-bottom:1.5rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:1.1rem}
+.card{background:var(--card);border:1px solid var(--line);border-top:2px solid var(--gold-dim);border-radius:10px;padding:1.1rem 1.2rem;min-width:0}
+.card h2{font-size:.85rem;color:var(--ink);letter-spacing:.12em;margin-bottom:.75rem;display:flex;gap:.5rem;align-items:center}
+.card h2 .ic{color:var(--gold)}
+.statrow{display:flex;gap:2.5rem;flex-wrap:wrap;margin:.9rem 0 .2rem}
+.stat b{font:700 2.6rem/1 Oswald;display:block}
+.stat span{color:var(--muted);font-family:Oswald;font-size:.72rem;letter-spacing:.22em}
+.hero-card{background:
+  repeating-linear-gradient(90deg, transparent 0 47px, rgba(216,180,74,.045) 47px 48px), var(--card);
+  border:1px solid var(--line);border-radius:10px;padding:1.4rem 1.6rem;margin-bottom:1.2rem}
+.row{display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:.55rem 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.row:first-of-type{border-top:0}
+.row .d{color:var(--muted);font-size:.86rem}
+.badge{font-size:.74rem;font-weight:700;padding:.18rem .6rem;border-radius:5px;white-space:nowrap;font-family:Oswald;letter-spacing:.08em}
+.badge.draft{background:#2A3550;color:#AEBBDA}
+.badge.sent{background:#173B2C;color:var(--green)}
+.badge.gold{background:#3A3020;color:var(--gold)}
+.btn{border:0;border-radius:7px;padding:.5rem 1rem;font-weight:700;font-size:.88rem}
+.btn-gold{background:var(--gold);color:#0A1626}
+.btn-gold:hover{background:#E5C563}
+.btn-line{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn-line:hover{border-color:var(--gold-dim);color:var(--gold)}
+.btn-sm{padding:.3rem .65rem;font-size:.78rem}
+.del{background:none;border:0;color:var(--red);font-weight:600;font-size:.82rem}
+label{display:block;font-weight:600;font-size:.9rem;margin:.9rem 0 .3rem}
+input,textarea,select{width:100%;background:#0B1728;border:1px solid #24344F;border-radius:7px;padding:.55rem .7rem;font:inherit;color:var(--ink)}
+input:focus,textarea:focus,select:focus,button:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.form-note{margin-top:.8rem;color:var(--green);font-weight:600;font-size:.9rem;min-height:1.2em}
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:1.1rem;margin-top:1.2rem}
+.kcol{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1rem}
+.kcol h3{font-size:.9rem;margin-bottom:.8rem}
+.kcol h3 small{color:var(--muted);font-family:"Source Sans 3";text-transform:none;letter-spacing:0}
+.task{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:.75rem .85rem;margin-bottom:.7rem}
+.task p{font-weight:600;font-size:.95rem;margin-bottom:.15rem}
+.task .who{color:var(--muted);font-size:.8rem;margin-bottom:.5rem}
+.task .acts{display:flex;gap:.5rem;flex-wrap:wrap}
+.empty{color:var(--muted)}
+/* ideas */
+.idea{display:flex;gap:.9rem;align-items:center;padding:.7rem 0;border-top:1px solid var(--line)}
+.idea:first-of-type{border-top:0}
+.up{background:#0B1728;border:1px solid #24344F;color:var(--gold);border-radius:7px;padding:.3rem .7rem;font-weight:700;min-width:52px}
+.up:hover{border-color:var(--gold)}
+.up.voted{background:#3A3020;border-color:var(--gold)}
+.hidden{display:none!important}
+footer{color:var(--muted);font-size:.85rem;text-align:center;padding:1rem;border-top:1px solid var(--line)}
+@media (max-width:780px){
+  .shell{flex-direction:column}
+  .sidebar{width:100%;flex-direction:row;flex-wrap:wrap;align-items:center;padding:.4rem .6rem;gap:.2rem}
+  .brand{padding:.4rem .5rem}
+  .sidebar nav{flex-direction:row;flex-wrap:wrap}
+  .sidebar nav button{border-left:0;border-bottom:3px solid transparent;padding:.5rem .7rem}
+  .sidebar nav button.on{border-bottom-color:var(--gold);background:none}
+  .sidebar .foot{display:none}
+  main{padding:1.3rem 1rem 2.5rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="demo-banner">
+  <span><strong>DEMO</strong> — interactive example with sample data. Nothing is saved or emailed.</span>
+  <a href="../">← Back to the docs</a>
+</div>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><span class="flag">⚑</span><div><span>Drum Major</span><span>PORTAL</span></div></div>
+    <nav aria-label="Portal navigation">
+      <button data-tab="dash" class="on">Dashboard</button>
+      <button data-tab="ann">Email Announcements</button>
+      <button data-tab="events">Events</button>
+      <button data-tab="tasks">Tasks</button>
+      <button data-tab="ideas">Ideas</button>
+    </nav>
+    <div class="foot">Avery Collins · Head Drum Major<br>WHS Marching Band 2026</div>
+  </aside>
+
+  <main>
+    <!-- Dashboard -->
+    <section id="tab-dash">
+      <div class="hero-card">
+        <p class="crumb">Dashboard · Friday, Jul 3</p>
+        <h1>Welcome, Avery Collins</h1>
+        <div class="statrow">
+          <div class="stat"><b id="stEvents">0</b><span>Upcoming events</span></div>
+          <div class="stat"><b id="stDrafts">0</b><span>Draft announcements</span></div>
+          <div class="stat"><b id="stTasks">0</b><span>Open tasks</span></div>
+        </div>
+      </div>
+      <div class="cards">
+        <div class="card"><h2><span class="ic">🗓</span> Upcoming events</h2><div id="dashEvents"></div></div>
+        <div class="card"><h2><span class="ic">📣</span> Recent announcements</h2><div id="dashAnn"></div></div>
+        <div class="card"><h2><span class="ic">☑</span> My tasks</h2><div id="dashTasks"></div></div>
+        <div class="card"><h2><span class="ic">💡</span> Top ideas</h2><div id="dashIdeas"></div></div>
+      </div>
+    </section>
+
+    <!-- Announcements -->
+    <section id="tab-ann" class="hidden">
+      <h1>Email announcements</h1>
+      <p class="sub">Draft it here, send it to the whole band list when it’s ready.</p>
+      <div class="card" style="max-width:640px;margin-bottom:1.2rem">
+        <h2>New announcement</h2>
+        <form id="annForm">
+          <label for="aSubj">Subject</label>
+          <input id="aSubj" required placeholder="e.g. Sectionals moved to the band room">
+          <label for="aBody">Message</label>
+          <textarea id="aBody" rows="4" required placeholder="What does the band need to know?"></textarea>
+          <p style="margin-top:1rem"><button class="btn btn-gold" type="submit">Save draft</button></p>
+          <p class="form-note" id="annNote" aria-live="polite"></p>
+        </form>
+      </div>
+      <div class="card" style="max-width:640px"><h2>All announcements</h2><div id="annList"></div></div>
+    </section>
+
+    <!-- Events -->
+    <section id="tab-events" class="hidden">
+      <h1>Events</h1>
+      <p class="sub">The season calendar — rehearsals, games, and competitions.</p>
+      <div class="card" style="max-width:640px;margin-bottom:1.2rem">
+        <h2>Add event</h2>
+        <form id="evForm">
+          <label for="eTitle">Event</label>
+          <input id="eTitle" required placeholder="e.g. Night rehearsal — full run-through">
+          <label for="eDate">Date</label>
+          <input id="eDate" type="date" required value="2026-09-25">
+          <p style="margin-top:1rem"><button class="btn btn-gold" type="submit">Add to calendar</button></p>
+          <p class="form-note" id="evNote" aria-live="polite"></p>
+        </form>
+      </div>
+      <div class="card" style="max-width:640px"><h2>Season calendar</h2><div id="evList"></div></div>
+    </section>
+
+    <!-- Tasks -->
+    <section id="tab-tasks" class="hidden">
+      <h1>Tasks</h1>
+      <p class="sub">Assign and track work across the leadership team.</p>
+      <div class="card">
+        <form id="taskForm" style="display:flex;gap:.8rem;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1;min-width:220px"><label for="tTitle" style="margin-top:0">Task</label>
+          <input id="tTitle" required placeholder="What needs doing?"></div>
+          <div style="min-width:160px"><label for="tWho" style="margin-top:0">Assignee</label>
+          <select id="tWho"><option>Unassigned</option><option>Avery Collins</option><option>Ben Ortiz</option><option>Maya Lin</option></select></div>
+          <button class="btn btn-gold" type="submit">Add</button>
+        </form>
+      </div>
+      <div class="kanban">
+        <div class="kcol"><h3>To Do <small id="cTodo"></small></h3><div id="colTodo"></div></div>
+        <div class="kcol"><h3>In Progress <small id="cProg"></small></h3><div id="colProg"></div></div>
+        <div class="kcol"><h3>Completed <small id="cDone"></small></h3><div id="colDone"></div></div>
+      </div>
+    </section>
+
+    <!-- Ideas -->
+    <section id="tab-ideas" class="hidden">
+      <h1>Ideas</h1>
+      <p class="sub">Pitch it, vote on it, make the show better.</p>
+      <div class="card" style="max-width:640px;margin-bottom:1.2rem">
+        <form id="ideaForm" style="display:flex;gap:.8rem;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1;min-width:220px"><label for="iText" style="margin-top:0">Your idea</label>
+          <input id="iText" required placeholder="e.g. LED batons for the closer"></div>
+          <button class="btn btn-gold" type="submit">Pitch it</button>
+        </form>
+      </div>
+      <div class="card" style="max-width:640px"><h2>Idea board</h2><div id="ideaList"></div></div>
+    </section>
+  </main>
+</div>
+
+<footer>Interactive demo with example data · <a href="../">Drum Major Portal documentation</a> · Made by Neel Bansal</footer>
+
+<script>
+const state = {
+  events: [
+    { id: 1, title: 'Band Camp Kickoff', date: '8/9/2026' },
+    { id: 2, title: 'Homecoming Halftime Show', date: '9/17/2026' },
+  ],
+  anns: [
+    { id: 1, subj: 'Uniform fittings — week of August 17', status: 'draft' },
+    { id: 2, subj: 'Welcome to the 2026 season!', status: 'sent' },
+  ],
+  tasks: [
+    { id: 1, title: 'Collect uniform sizes from new members', who: 'Maya Lin', col: 'todo' },
+    { id: 2, title: 'Reserve pit truck for Oct 3 competition', who: 'Unassigned', col: 'todo' },
+    { id: 3, title: 'Print drill charts for Movement II', who: 'Avery Collins', col: 'prog' },
+  ],
+  ideas: [
+    { id: 1, text: 'Glow-stick tunnel entrance for the finale — sell extras at concessions', votes: 4, voted: false },
+    { id: 2, text: 'Section leader shoutouts in the Friday announcement', votes: 2, voted: false },
+  ],
+  nextId: 100,
+};
+const $ = s => document.querySelector(s);
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function fmtDate(iso){ const [y,m,d] = iso.split('-').map(Number); return `${m}/${d}/${y}`; }
+
+function render(){
+  // dashboard stats + cards
+  $('#stEvents').textContent = state.events.length;
+  $('#stDrafts').textContent = state.anns.filter(a => a.status === 'draft').length;
+  $('#stTasks').textContent = state.tasks.filter(t => t.col !== 'done').length;
+  $('#dashEvents').innerHTML = state.events.map(e =>
+    `<div class="row"><span>${esc(e.title)}</span><span class="d">${e.date}</span></div>`).join('') || '<p class="empty">None yet.</p>';
+  $('#dashAnn').innerHTML = state.anns.slice(-3).reverse().map(a =>
+    `<div class="row"><span>${esc(a.subj)}</span><span class="badge ${a.status}">${a.status === 'draft' ? 'Draft' : 'Sent'}</span></div>`).join('');
+  const mine = state.tasks.filter(t => t.who === 'Avery Collins' && t.col !== 'done');
+  $('#dashTasks').innerHTML = mine.map(t =>
+    `<div class="row"><span>${esc(t.title)}</span><span class="badge gold">${t.col === 'todo' ? 'To Do' : 'In Progress'}</span></div>`).join('') || '<p class="empty">Nothing assigned.</p>';
+  $('#dashIdeas').innerHTML = [...state.ideas].sort((a,b) => b.votes - a.votes).slice(0,3).map(i =>
+    `<div class="row"><span>${esc(i.text)}</span><span class="d">▲ ${i.votes}</span></div>`).join('');
+
+  // announcements
+  $('#annList').innerHTML = state.anns.slice().reverse().map(a => `
+    <div class="row"><span>${esc(a.subj)}</span>
+      <span style="display:flex;gap:.6rem;align-items:center">
+        <span class="badge ${a.status}">${a.status === 'draft' ? 'Draft' : 'Sent'}</span>
+        ${a.status === 'draft' ? `<button class="btn btn-line btn-sm" data-send="${a.id}">Send to band list</button>` : ''}
+      </span></div>`).join('');
+
+  // events
+  $('#evList').innerHTML = state.events.map(e =>
+    `<div class="row"><span>${esc(e.title)}</span><span class="d">${e.date}</span></div>`).join('');
+
+  // kanban
+  const cols = { todo: [], prog: [], done: [] };
+  state.tasks.forEach(t => cols[t.col].push(t));
+  $('#cTodo').textContent = `(${cols.todo.length})`;
+  $('#cProg').textContent = `(${cols.prog.length})`;
+  $('#cDone').textContent = `(${cols.done.length})`;
+  const moves = { todo: [['prog','→ In Progress'],['done','→ Completed']],
+                  prog: [['todo','→ To Do'],['done','→ Completed']],
+                  done: [['todo','→ To Do'],['prog','→ In Progress']] };
+  for (const [col, el] of [['todo','#colTodo'],['prog','#colProg'],['done','#colDone']]){
+    $(el).innerHTML = cols[col].map(t => `
+      <div class="task"><p>${esc(t.title)}</p><div class="who">${t.who}</div>
+        <div class="acts">
+          ${moves[col].map(([to,label]) => `<button class="btn btn-line btn-sm" data-move="${t.id}" data-to="${to}">${label}</button>`).join('')}
+          <button class="del" data-del="${t.id}">Delete</button>
+        </div></div>`).join('') || '<p class="empty">—</p>';
+  }
+
+  // ideas
+  $('#ideaList').innerHTML = [...state.ideas].sort((a,b) => b.votes - a.votes).map(i => `
+    <div class="idea">
+      <button class="up ${i.voted ? 'voted' : ''}" data-vote="${i.id}" aria-label="Upvote">▲ ${i.votes}</button>
+      <span>${esc(i.text)}</span>
+    </div>`).join('');
+}
+
+document.querySelectorAll('.sidebar nav button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.sidebar nav button').forEach(x => x.classList.toggle('on', x === b));
+  ['dash','ann','events','tasks','ideas'].forEach(t => $('#tab-'+t).classList.toggle('hidden', t !== b.dataset.tab));
+}));
+
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t.dataset.send){ state.anns.find(a => a.id == t.dataset.send).status = 'sent'; render(); }
+  if (t.dataset.move){ state.tasks.find(x => x.id == t.dataset.move).col = t.dataset.to; render(); }
+  if (t.dataset.del){ state.tasks = state.tasks.filter(x => x.id != t.dataset.del); render(); }
+  if (t.dataset.vote){
+    const i = state.ideas.find(x => x.id == t.dataset.vote);
+    i.voted = !i.voted; i.votes += i.voted ? 1 : -1; render();
+  }
+});
+
+$('#annForm').addEventListener('submit', e => {
+  e.preventDefault();
+  state.anns.push({ id: state.nextId++, subj: $('#aSubj').value.trim(), status: 'draft' });
+  $('#annNote').textContent = 'Draft saved — send it from the list below when it’s ready.';
+  e.target.reset(); render();
+});
+$('#evForm').addEventListener('submit', e => {
+  e.preventDefault();
+  state.events.push({ id: state.nextId++, title: $('#eTitle').value.trim(), date: fmtDate($('#eDate').value) });
+  $('#evNote').textContent = 'Added to the season calendar.';
+  e.target.reset(); $('#eDate').value = '2026-09-25'; render();
+});
+$('#taskForm').addEventListener('submit', e => {
+  e.preventDefault();
+  state.tasks.push({ id: state.nextId++, title: $('#tTitle').value.trim(), who: $('#tWho').value, col: 'todo' });
+  e.target.reset(); render();
+});
+$('#ideaForm').addEventListener('submit', e => {
+  e.preventDefault();
+  state.ideas.push({ id: state.nextId++, text: $('#iText').value.trim(), votes: 1, voted: true });
+  e.target.reset(); render();
+});
+
+render();
+</script>
+</body>
+</html>
