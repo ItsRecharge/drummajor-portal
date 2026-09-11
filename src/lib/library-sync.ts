@@ -157,6 +157,14 @@ export async function deleteFromDrive(driveId: string | null): Promise<void> {
 
 export type SyncReport = { added: number; updated: number; removed: number; pieces: number };
 
+// Only one tree sync at a time (the cron and the "Sync now" button can
+// overlap). While one runs, index rebuilds from other paths are skipped so
+// they never read a half-mirrored tree.
+let syncing = false;
+export function isSyncing(): boolean {
+  return syncing;
+}
+
 type QueueEntry = { driveId: string; parentItemId: string | null; depth: number; category: MusicCategory | null };
 
 // Mirror the Drive root into the DB: walk every folder, upsert items by Drive
@@ -164,6 +172,16 @@ type QueueEntry = { driveId: string; parentItemId: string | null; depth: number;
 // MusicPiece rows for folders directly under a category folder, and delete DB
 // rows whose Drive file is gone. Then regenerate index.csv.
 export async function syncDriveTree(): Promise<SyncReport> {
+  if (syncing) throw new Error("A Drive sync is already running — try again in a minute.");
+  syncing = true;
+  try {
+    return await syncDriveTreeInner();
+  } finally {
+    syncing = false;
+  }
+}
+
+async function syncDriveTreeInner(): Promise<SyncReport> {
   if (!(await isDriveConfigured())) throw new Error("Google Drive isn't configured.");
   const rootDriveId = await getRootFolderId();
   if (!rootDriveId) throw new Error("Set the Drive root folder in Settings first.");
@@ -210,8 +228,15 @@ export async function syncDriveTree(): Promise<SyncReport> {
     const { count } = await prisma.libraryItem.deleteMany({ where: { id: { in: staleIds } } });
     report.removed = count;
   }
+  // Rows marked SYNCED with no Drive id are dead seeds (the "Music"/"Documents"
+  // roots from the 2_library_merge migration on installs that never had a Drive
+  // root). Drop them once they hold nothing, so they stop cluttering the browser.
+  const seeds = await prisma.libraryItem.deleteMany({
+    where: { syncState: "SYNCED", driveId: null, type: "FOLDER", children: { none: {} } },
+  });
+  report.removed += seeds.count;
 
-  await rebuildIndexCsv();
+  await rebuildIndexCsv({ fromSync: true });
   return report;
 }
 

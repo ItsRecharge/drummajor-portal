@@ -39,10 +39,10 @@ test("CATEGORY_FOLDERS maps every category to its Drive folder name", () => {
     CONCERT_BAND: "Concert Band",
     JAZZ_BAND: "Jazz Band",
     MARCHING_BAND: "Marching Band",
-    MISCELLANEOUS: "Miscellaneous",
-    MUSICAL: "Musical",
+    MISCELLANEOUS: "Misc. (Non-Music)",
+    MUSICAL: "Musical (Pit)",
     ORCHESTRA: "Orchestra",
-    SOLO_ENSEMBLE: "Solo-Ensemble",
+    SOLO_ENSEMBLE: "Solo & Ensemble",
   });
 });
 
@@ -51,10 +51,10 @@ test("CATEGORY_LABELS maps every category to a human label", () => {
     CONCERT_BAND: "Concert Band",
     JAZZ_BAND: "Jazz Band",
     MARCHING_BAND: "Marching Band",
-    MISCELLANEOUS: "Miscellaneous",
+    MISCELLANEOUS: "Misc. (Non-Music)",
     MUSICAL: "Musical (Pit)",
     ORCHESTRA: "Orchestra",
-    SOLO_ENSEMBLE: "Solo / Ensemble",
+    SOLO_ENSEMBLE: "Solo & Ensemble",
   });
 });
 
@@ -70,6 +70,10 @@ test("categoryFromFolderName ignores case and non-alphanumeric characters", () =
   assert.equal(categoryFromFolderName("solo ensemble"), "SOLO_ENSEMBLE");
   assert.equal(categoryFromFolderName("SOLO_ENSEMBLE"), "SOLO_ENSEMBLE");
   assert.equal(categoryFromFolderName("concert band"), "CONCERT_BAND");
+  assert.equal(categoryFromFolderName("Misc. (Non-Music)"), "MISCELLANEOUS");
+  assert.equal(categoryFromFolderName("Miscellaneous"), "MISCELLANEOUS");
+  assert.equal(categoryFromFolderName("Musical (Pit)"), "MUSICAL");
+  assert.equal(categoryFromFolderName("Musical"), "MUSICAL");
   assert.equal(categoryFromFolderName("ConcertBand"), "CONCERT_BAND");
   assert.equal(categoryFromFolderName("  Jazz   Band  "), "JAZZ_BAND");
   assert.equal(categoryFromFolderName("MARCHING BAND!"), "MARCHING_BAND");
@@ -79,9 +83,8 @@ test("categoryFromFolderName ignores case and non-alphanumeric characters", () =
 });
 
 test("categoryFromFolderName returns null for anything that is not an exact normalized match", () => {
-  assert.equal(categoryFromFolderName("Musical (pit)"), null);
-  assert.equal(categoryFromFolderName("Musical (Pit)"), null);
-  assert.equal(categoryFromFolderName("Concert"), null);
+  assert.equal(categoryFromFolderName("Symphonic Winds"), null);
+  assert.equal(categoryFromFolderName("Symphony Orchestra Winds"), null);
   assert.equal(categoryFromFolderName("Band Music Database"), null);
   assert.equal(categoryFromFolderName("Concert Band 2024"), null);
   assert.equal(categoryFromFolderName(""), null);

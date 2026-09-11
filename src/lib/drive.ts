@@ -109,6 +109,13 @@ export async function uploadFile(opts: {
   return { id: res.data.id!, sizeBytes: Number(res.data.size ?? opts.buffer.length) };
 }
 
+// Download a small text file (index.csv) as a string.
+export async function getFileText(fileId: string): Promise<string> {
+  const drive = await getDrive();
+  const res = await drive.files.get({ fileId, alt: "media", supportsAllDrives: true }, { responseType: "text" });
+  return typeof res.data === "string" ? res.data : String(res.data ?? "");
+}
+
 // Replace an existing file's bytes in place (keeps its id and sharing).
 export async function updateFileContent(fileId: string, mimeType: string, buffer: Buffer): Promise<void> {
   const drive = await getDrive();

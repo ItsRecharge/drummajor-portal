@@ -386,7 +386,16 @@ students from the real saves, 19 shared), announcements (Tiptap editor, @mention
 schedule/cancel, templates), band vs drum-major events (.ics), task/idea emails, and the
 music catalog (Add music → concert-order part names, edit cascades, search, index.csv).
 
-Still to verify on the music-dept server (needs real credentials):
+Verified live against the real `Band Music Database` folder (2026-09-11, local app on
+Postgres 16 + the production service account): Test access, full sync (846 items,
+147 pieces, 67s), Add music → folder + generated part files in Drive, Edit details →
+Drive rename cascades, Delete → gone from Drive, `index.csv` merged (692 rows, curated
+`source`/`note`/`part` preserved, loose Misc. files included). Category folders are
+`Concert Band`, `Jazz Band`, `Marching Band`, `Misc. (Non-Music)`, `Musical (Pit)`,
+`Orchestra`, `Solo & Ensemble`. Library UI is two tabs: Music search (paged, 25 at a
+time) and Library folders.
+
+Still to verify on the music-dept server:
 - Settings → Google Drive: paste the `Band Music Database` folder, Test access, Sync now →
   pieces appear with parsed titles/credits, `index.csv` is written at the root.
 - Add music pushes `Category/Title - arr. Name/Title - Part.pdf` to Drive; Edit details renames

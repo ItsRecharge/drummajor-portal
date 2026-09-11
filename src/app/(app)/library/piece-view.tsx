@@ -45,7 +45,7 @@ export async function PieceView({
               {last ? (
                 <span className="font-medium text-foreground">{c.name}</span>
               ) : (
-                <Link href={c.id ? `/library/${c.id}` : "/library"} className="hover:text-foreground hover:underline">
+                <Link href={c.id ? `/library/${c.id}` : "/library/folders"} className="hover:text-foreground hover:underline">
                   {c.name}
                 </Link>
               )}

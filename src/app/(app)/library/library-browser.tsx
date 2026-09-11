@@ -21,20 +21,14 @@ function formatBytes(bytes: bigint | null): string {
   return `${v.toFixed(v < 10 ? 1 : 0)} ${units[i]}`;
 }
 
-// `embedded`: rendered under the music catalog on the root page, so it shows a
-// section heading instead of the page title.
+// `embedded`: rendered inside the Library tabs page, which owns the heading.
 export async function LibraryBrowser({ folderId, embedded = false }: { folderId: string | null; embedded?: boolean }) {
   await requireRole(Role.ADMIN, Role.DRUM_MAJOR, Role.LIBRARIAN);
   const [items, crumbs] = await Promise.all([listChildren(folderId), getBreadcrumbs(folderId)]);
 
   return (
     <div className="grid gap-6">
-      {embedded ? (
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-sm font-semibold tracking-wide uppercase">Folders</h2>
-          <span className="text-xs text-muted-foreground">Everything in the Drive folder, as-is.</span>
-        </div>
-      ) : (
+      {embedded ? null : (
         <div>
           <h1 className="text-2xl font-bold tracking-tight uppercase">Library</h1>
           <p className="text-sm text-muted-foreground">
@@ -54,7 +48,7 @@ export async function LibraryBrowser({ folderId, embedded = false }: { folderId:
                 <span className="font-medium text-foreground">{c.name}</span>
               ) : (
                 <Link
-                  href={c.id ? `/library/${c.id}` : "/library"}
+                  href={c.id ? `/library/${c.id}` : "/library/folders"}
                   className="hover:text-foreground hover:underline"
                 >
                   {c.name}

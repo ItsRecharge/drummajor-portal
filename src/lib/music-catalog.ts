@@ -157,19 +157,30 @@ export type PieceSummary = {
   updatedAt: Date;
 };
 
-export async function searchPieces(opts: { q?: string; category?: MusicCategory | null } = {}): Promise<PieceSummary[]> {
+export const CATALOG_PAGE_SIZE = 25;
+
+// Paged search so the page never renders the whole catalog at once.
+export async function searchPieces(
+  opts: { q?: string; category?: MusicCategory | null; offset?: number; limit?: number } = {},
+): Promise<{ rows: PieceSummary[]; total: number }> {
   const q = opts.q?.trim();
-  const rows = await prisma.musicPiece.findMany({
-    where: {
-      ...(opts.category ? { category: opts.category } : {}),
-      ...(q
-        ? { OR: [{ title: { contains: q, mode: "insensitive" } }, { credit: { contains: q, mode: "insensitive" } }] }
-        : {}),
-    },
-    include: { folder: { select: { syncState: true, _count: { select: { children: { where: { type: "FILE" } } } } } } },
-    orderBy: [{ title: "asc" }],
-  });
-  return rows.map((r) => ({
+  const where = {
+    ...(opts.category ? { category: opts.category } : {}),
+    ...(q
+      ? { OR: [{ title: { contains: q, mode: "insensitive" as const } }, { credit: { contains: q, mode: "insensitive" as const } }] }
+      : {}),
+  };
+  const [rows, total] = await Promise.all([
+    prisma.musicPiece.findMany({
+      where,
+      include: { folder: { select: { syncState: true, _count: { select: { children: { where: { type: "FILE" } } } } } } },
+      orderBy: [{ title: "asc" }, { id: "asc" }],
+      skip: Math.max(0, opts.offset ?? 0),
+      take: Math.min(100, Math.max(1, opts.limit ?? CATALOG_PAGE_SIZE)),
+    }),
+    prisma.musicPiece.count({ where }),
+  ]);
+  return { total, rows: rows.map((r) => ({
     id: r.id,
     folderId: r.folderId,
     title: r.title,
@@ -179,7 +190,7 @@ export async function searchPieces(opts: { q?: string; category?: MusicCategory 
     files: r.folder._count.children,
     syncState: r.folder.syncState,
     updatedAt: r.updatedAt,
-  }));
+  })) };
 }
 
 export type PartRow = {

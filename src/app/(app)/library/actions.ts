@@ -11,9 +11,9 @@ import { parseForm, type ActionState } from "@/lib/form";
 import { musicPieceSchema } from "@/lib/validation";
 import { renameDriveItem } from "@/lib/drive";
 import { stageUpload, kickSync, deleteFromDrive, syncDriveTree, retryItem } from "@/lib/library-sync";
-import { addParts, createPiece, renamePart, updatePiece, type PartUpload } from "@/lib/music-catalog";
+import { addParts, createPiece, renamePart, searchPieces, updatePiece, type PartUpload, type PieceSummary } from "@/lib/music-catalog";
 import { rebuildIndexCsv } from "@/lib/music-index";
-import { partIndex, type MusicCategory } from "@/lib/music-naming";
+import { MUSIC_CATEGORIES, partIndex, type MusicCategory } from "@/lib/music-naming";
 import { Role } from "@/generated/prisma/client";
 
 const LIBRARY_ROLES = [Role.ADMIN, Role.DRUM_MAJOR, Role.LIBRARIAN] as const;
@@ -243,4 +243,18 @@ export async function deletePieceAction(formData: FormData): Promise<void> {
   after(() => rebuildIndexCsv());
   revalidatePath("/library", "layout");
   redirect("/library");
+}
+
+// Next page of catalog results for the "Load more" button.
+export type PieceRow = Omit<PieceSummary, "updatedAt"> & { updatedAt: string };
+
+export async function loadMorePiecesAction(
+  q: string,
+  category: string | null,
+  offset: number,
+): Promise<{ rows: PieceRow[]; total: number }> {
+  await requireRole(...LIBRARY_ROLES);
+  const cat = category && (MUSIC_CATEGORIES as readonly string[]).includes(category) ? (category as MusicCategory) : null;
+  const res = await searchPieces({ q, category: cat, offset });
+  return { total: res.total, rows: res.rows.map((r) => ({ ...r, updatedAt: r.updatedAt.toISOString() })) };
 }

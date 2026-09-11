@@ -27,14 +27,15 @@ export const MUSIC_CATEGORIES = [
 export type MusicCategory = (typeof MUSIC_CATEGORIES)[number];
 
 /** Drive folder name for each category. */
+// Exactly as the folders are named in the band's "Band Music Database" Drive.
 export const CATEGORY_FOLDERS: Record<MusicCategory, string> = {
   CONCERT_BAND: "Concert Band",
   JAZZ_BAND: "Jazz Band",
   MARCHING_BAND: "Marching Band",
-  MISCELLANEOUS: "Miscellaneous",
-  MUSICAL: "Musical",
+  MISCELLANEOUS: "Misc. (Non-Music)",
+  MUSICAL: "Musical (Pit)",
   ORCHESTRA: "Orchestra",
-  SOLO_ENSEMBLE: "Solo-Ensemble",
+  SOLO_ENSEMBLE: "Solo & Ensemble",
 };
 
 /** Human-facing label for each category. */
@@ -42,10 +43,27 @@ export const CATEGORY_LABELS: Record<MusicCategory, string> = {
   CONCERT_BAND: "Concert Band",
   JAZZ_BAND: "Jazz Band",
   MARCHING_BAND: "Marching Band",
-  MISCELLANEOUS: "Miscellaneous",
+  MISCELLANEOUS: "Misc. (Non-Music)",
   MUSICAL: "Musical (Pit)",
   ORCHESTRA: "Orchestra",
-  SOLO_ENSEMBLE: "Solo / Ensemble",
+  SOLO_ENSEMBLE: "Solo & Ensemble",
+};
+
+// Other spellings that should still resolve to a category (older folder
+// names, hand-typed variants). Keys are compared after alnumKey().
+const CATEGORY_ALIASES: Record<string, MusicCategory> = {
+  misc: "MISCELLANEOUS",
+  miscellaneous: "MISCELLANEOUS",
+  miscnonmusic: "MISCELLANEOUS",
+  nonmusic: "MISCELLANEOUS",
+  musical: "MUSICAL",
+  musicalpit: "MUSICAL",
+  pit: "MUSICAL",
+  soloensemble: "SOLO_ENSEMBLE",
+  soloandensemble: "SOLO_ENSEMBLE",
+  concert: "CONCERT_BAND",
+  jazz: "JAZZ_BAND",
+  marching: "MARCHING_BAND",
 };
 
 function byCategory<T>(build: (category: MusicCategory) => T): Record<MusicCategory, T> {
@@ -59,15 +77,16 @@ function alnumKey(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-const CATEGORY_BY_FOLDER_KEY: ReadonlyMap<string, MusicCategory> = new Map(
-  MUSIC_CATEGORIES.map((category) => [alnumKey(CATEGORY_FOLDERS[category]), category]),
-);
+const CATEGORY_BY_FOLDER_KEY: ReadonlyMap<string, MusicCategory> = new Map([
+  ...MUSIC_CATEGORIES.map((category): [string, MusicCategory] => [alnumKey(CATEGORY_FOLDERS[category]), category]),
+  ...Object.entries(CATEGORY_ALIASES).map(([k, v]): [string, MusicCategory] => [alnumKey(k), v]),
+]);
 
 /**
  * Match a Drive folder name to a category. Case-insensitive and ignores
  * punctuation/whitespace, so "Solo/Ensemble", "solo ensemble" and
- * "Solo-Ensemble" all match SOLO_ENSEMBLE; anything else (e.g. "Musical (pit)")
- * returns null.
+ * "Solo & Ensemble" all match SOLO_ENSEMBLE, and known aliases ("Misc.",
+ * "Musical (Pit)") resolve too; anything else returns null.
  */
 export function categoryFromFolderName(name: string): MusicCategory | null {
   const key = alnumKey(name);
