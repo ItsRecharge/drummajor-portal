@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { ensureBuiltInGroups, EVERYONE } from "@/lib/groups";
+import { getLeadershipEmails } from "@/lib/leadership";
 import { Role } from "@/generated/prisma/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContactsManager, GroupsManager, type GroupRow } from "./roster-manager";
+import { ClassroomImport } from "./classroom-import";
 import { CsvImport } from "./csv-import";
 
 export const metadata = { title: "Roster — Drum Major Portal" };
@@ -12,7 +14,7 @@ export default async function RostersPage() {
   await requireRole(Role.ADMIN, Role.DRUM_MAJOR);
   await ensureBuiltInGroups();
 
-  const [groupsRaw, contactsRaw, totalContacts] = await Promise.all([
+  const [groupsRaw, contactsRaw, totalContacts, leadershipEmails] = await Promise.all([
     prisma.group.findMany({
       orderBy: [{ builtIn: "desc" }, { name: "asc" }],
       include: { _count: { select: { contacts: true } } },
@@ -22,6 +24,7 @@ export default async function RostersPage() {
       include: { groups: { select: { groupId: true } } },
     }),
     prisma.contact.count(),
+    getLeadershipEmails(),
   ]);
 
   const groups: GroupRow[] = groupsRaw.map((g) => ({
@@ -41,9 +44,28 @@ export default async function RostersPage() {
     groupIds: c.groups.map((g) => g.groupId),
   }));
 
+  const classGroups = groups.filter((g) => g.name !== EVERYONE).map((g) => ({ id: g.id, name: g.name }));
+
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-bold tracking-tight uppercase">Roster</h1>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight uppercase">Roster</h1>
+        <p className="text-sm text-muted-foreground">
+          Who gets the emails. Drum majors and admins are always included and never emailed twice.
+        </p>
+      </div>
+
+      <Card className="border-t-2 border-t-primary">
+        <CardHeader>
+          <CardTitle>Import from Google Classroom</CardTitle>
+          <CardDescription>
+            Save the class&apos;s People page and upload it. Students only — teachers are skipped.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ClassroomImport groups={classGroups} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -51,7 +73,7 @@ export default async function RostersPage() {
           <CardDescription>People in the band directory and their groups.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ContactsManager contacts={contacts} groups={groups} />
+          <ContactsManager contacts={contacts} groups={groups} leadershipEmails={leadershipEmails} />
         </CardContent>
       </Card>
 
@@ -63,19 +85,16 @@ export default async function RostersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <GroupsManager groups={groups} />
+          <GroupsManager groups={groups} totalContacts={totalContacts} />
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Import CSV</CardTitle>
-          <CardDescription>Bulk-add contacts with a dedupe preview before importing.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <details className="group rounded-lg border bg-card">
+        <summary className="cursor-pointer px-6 py-4 text-sm font-medium">Other ways to import (CSV)</summary>
+        <div className="border-t px-6 py-4">
           <CsvImport />
-        </CardContent>
-      </Card>
+        </div>
+      </details>
     </div>
   );
 }

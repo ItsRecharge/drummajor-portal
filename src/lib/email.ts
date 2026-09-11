@@ -57,7 +57,16 @@ export function announcementEmail(opts: {
 }
 
 // Sends with the saved config. Throws if SMTP isn't configured yet.
-export async function sendMail(opts: { to: string; subject: string; html: string }): Promise<void> {
+export type MailAttachment = { filename: string; content: Buffer | string; contentType?: string };
+
+export async function sendMail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  attachments?: MailAttachment[];
+  // Calendar invite (nodemailer renders it as a text/calendar alternative).
+  icalEvent?: { method: string; content: string };
+}): Promise<void> {
   const cfg = await getSmtpConfig();
   if (!cfg) throw new Error("SMTP is not configured");
   const transport = buildTransport(cfg);
