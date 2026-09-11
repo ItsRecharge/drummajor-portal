@@ -6,7 +6,10 @@ import { requireRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { parseForm, type ActionState } from "@/lib/form";
 import { taskSchema } from "@/lib/validation";
-import { createNotification } from "@/lib/notify";
+import { after } from "next/server";
+import { createNotification, notifyUsers } from "@/lib/notify";
+import { getLeadershipUsers, getBandName, emailLeadership } from "@/lib/leadership";
+import { taskCreatedEmail } from "@/lib/email";
 import { Role, TaskStatus } from "@/generated/prisma/client";
 
 const TASK_ROLES = [Role.ADMIN, Role.DRUM_MAJOR] as const;
@@ -24,6 +27,27 @@ export async function createTaskAction(_prev: ActionState, formData: FormData): 
   if (assigneeId) {
     await createNotification(assigneeId, "TASK_ASSIGNED", { title: task.title });
   }
+
+  // Everyone else on the leadership team hears about it too (bell + email).
+  const [leaders, assignee, bandName] = await Promise.all([
+    getLeadershipUsers(),
+    assigneeId ? prisma.user.findUnique({ where: { id: assigneeId }, select: { name: true } }) : null,
+    getBandName(),
+  ]);
+  const others = leaders.filter((u) => u.id !== actor.id && u.id !== assigneeId).map((u) => u.id);
+  await notifyUsers(others, "TASK_CREATED", {
+    title: task.title,
+    creator: actor.name,
+    assignee: assignee?.name ?? null,
+  });
+  const mail = taskCreatedEmail({
+    title: task.title,
+    creatorName: actor.name,
+    assigneeName: assignee?.name ?? null,
+    bandName,
+  });
+  after(() => emailLeadership({ ...mail, exceptUserId: actor.id }));
+
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
   return { success: true, message: "Task added." };

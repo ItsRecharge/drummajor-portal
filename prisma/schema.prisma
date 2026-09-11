@@ -77,6 +77,7 @@ model User {
   noteComments      NoteComment[]
   libraryUploads    LibraryItem[]
   handoffNotes      HandoffNote[]
+  eventsCreated     Event[]             @relation("EventCreator")
   notifications     Notification[]
   auditEntries      AuditLog[]
   securityEntries   SecurityLog[]       @relation("ActorSecurity")
@@ -300,15 +301,29 @@ model LibraryItem {
 // Planning: events, tasks
 // ---------------------------------------------------------------------------
 
+// BAND events are for the whole band (optionally emailed to the rosters as an
+// announcement); DRUM_MAJORS events go only to the leadership team, as an
+// email with a calendar invite plus an in-app notification.
+enum EventAudience {
+  BAND
+  DRUM_MAJORS
+}
+
 model Event {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   title       String
   description String?
+  location    String?
   date        DateTime
   time        String?
-  notify      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  audience    EventAudience @default(BAND)
+  notify      Boolean       @default(false)
+  createdById String?
+  createdBy   User?         @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([audience, date])
 }
 
 enum TaskStatus {

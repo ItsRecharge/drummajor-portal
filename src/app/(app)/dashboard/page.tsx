@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   CalendarDays,
+  CalendarCheck,
   Megaphone,
   Music,
   ListChecks,
@@ -11,7 +12,8 @@ import {
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { unreadCount } from "@/lib/notify";
-import { TaskStatus } from "@/generated/prisma/client";
+import { TaskStatus, EventAudience } from "@/generated/prisma/client";
+import { formatEventDate, todayUtc } from "../events/event-dates";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +24,7 @@ export const metadata = { title: "Dashboard — Drum Major Portal" };
 export default async function DashboardPage() {
   const { user } = await requireAuth();
   const now = new Date();
+  const todayStart = todayUtc();
 
   // "Open" = not completed AND (mine OR nobody's). Unassigned tasks are everyone's
   // problem, so they show up for every leader until someone claims them.
@@ -30,9 +33,13 @@ export default async function DashboardPage() {
     OR: [{ assigneeId: user.id }, { assigneeId: null }],
   };
 
-  const [events, announcements, music, openTasks, ideas, unread, eventCount, openTaskCount] =
+  const [events, announcements, music, openTasks, ideas, unread, eventCount, openTaskCount, dmEvents] =
     await Promise.all([
-      prisma.event.findMany({ where: { date: { gte: now } }, orderBy: { date: "asc" }, take: 5 }),
+      prisma.event.findMany({
+        where: { date: { gte: todayStart }, audience: EventAudience.BAND },
+        orderBy: { date: "asc" },
+        take: 5,
+      }),
       prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
       prisma.libraryItem.findMany({
         where: { type: "FILE" },
@@ -52,8 +59,13 @@ export default async function DashboardPage() {
         include: { _count: { select: { votes: true } } },
       }),
       unreadCount(user.id),
-      prisma.event.count({ where: { date: { gte: now } } }),
+      prisma.event.count({ where: { date: { gte: todayStart } } }),
       prisma.task.count({ where: openTasksWhere }),
+      prisma.event.findMany({
+        where: { date: { gte: todayStart }, audience: EventAudience.DRUM_MAJORS },
+        orderBy: { date: "asc" },
+        take: 5,
+      }),
     ]);
 
   const today = now.toLocaleDateString(undefined, {
@@ -111,10 +123,33 @@ export default async function DashboardPage() {
               <CardDescription>None scheduled.</CardDescription>
             ) : (
               events.map((e) => (
-                <div key={e.id} className="flex justify-between gap-2">
+                <Link key={e.id} href="/events" className="flex justify-between gap-2 hover:underline">
                   <span className="truncate">{e.title}</span>
-                  <span className="shrink-0 text-muted-foreground">{e.date.toLocaleDateString()}</span>
-                </div>
+                  <span className="shrink-0 text-muted-foreground">{formatEventDate(e.date, { weekday: "short" })}</span>
+                </Link>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-t-2 border-t-primary">
+          <CardHeader>
+            <CardTitle className={cardTitle}>
+              <CalendarCheck className="size-4 text-primary" />
+              <Link href="/dm-events" className="hover:underline">
+                Drum major events
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-1.5 text-sm">
+            {dmEvents.length === 0 ? (
+              <CardDescription>None scheduled.</CardDescription>
+            ) : (
+              dmEvents.map((e) => (
+                <Link key={e.id} href="/dm-events" className="flex justify-between gap-2 hover:underline">
+                  <span className="truncate">{e.title}</span>
+                  <span className="shrink-0 text-muted-foreground">{formatEventDate(e.date, { weekday: "short" })}</span>
+                </Link>
               ))
             )}
           </CardContent>

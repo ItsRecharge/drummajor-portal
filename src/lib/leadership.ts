@@ -9,6 +9,12 @@ import { LEADERSHIP_ROLES } from "@/lib/roles";
 
 export type LeadershipUser = { id: string; name: string; email: string };
 
+// Band name for email mastheads (single-row Organization).
+export async function getBandName(): Promise<string | undefined> {
+  const org = await prisma.organization.findFirst({ select: { bandName: true } });
+  return org?.bandName;
+}
+
 export async function getLeadershipUsers(): Promise<LeadershipUser[]> {
   return prisma.user.findMany({
     where: { role: { in: [...LEADERSHIP_ROLES] } },

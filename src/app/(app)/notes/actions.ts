@@ -6,7 +6,10 @@ import { requireRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { parseForm, type ActionState } from "@/lib/form";
 import { noteSchema, noteCommentSchema } from "@/lib/validation";
-import { createNotification } from "@/lib/notify";
+import { after } from "next/server";
+import { createNotification, notifyUsers } from "@/lib/notify";
+import { getLeadershipUsers, getBandName, emailLeadership } from "@/lib/leadership";
+import { ideaCreatedEmail } from "@/lib/email";
 import { Role } from "@/generated/prisma/client";
 
 const NOTE_ROLES = [Role.ADMIN, Role.DRUM_MAJOR] as const;
@@ -17,7 +20,7 @@ export async function createNoteAction(_prev: ActionState, formData: FormData): 
   if (!parsed.ok) return parsed.state;
 
   // New notes are scattered near the top-left so they don't all stack exactly.
-  await prisma.note.create({
+  const note = await prisma.note.create({
     data: {
       text: parsed.data.text,
       color: parsed.data.color || "#fff3a0",
@@ -29,6 +32,17 @@ export async function createNoteAction(_prev: ActionState, formData: FormData): 
     },
   });
   await logAudit({ actorId: actor.id, action: "NOTE_CREATED" });
+
+  // Tell the rest of the leadership team (bell + email). Anonymous notes stay
+  // anonymous: the author's name is left out of both.
+  const preview = note.text.length > 120 ? `${note.text.slice(0, 117)}…` : note.text;
+  const authorName = note.anonymous ? null : actor.name;
+  const [leaders, bandName] = await Promise.all([getLeadershipUsers(), getBandName()]);
+  const others = leaders.filter((u) => u.id !== actor.id).map((u) => u.id);
+  await notifyUsers(others, "NOTE_CREATED", { preview, author: authorName });
+  const mail = ideaCreatedEmail({ preview, authorName, bandName });
+  after(() => emailLeadership({ ...mail, exceptUserId: actor.id }));
+
   revalidatePath("/notes");
   return { success: true, message: "Note added." };
 }

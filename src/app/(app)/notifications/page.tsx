@@ -22,6 +22,12 @@ function summarize(type: string, payload: unknown): string {
       return `${p.voter ?? "Someone"} upvoted your idea`;
     case "NOTE_COMMENT":
       return `${p.commenter ?? "Someone"} commented on your idea`;
+    case "TASK_CREATED":
+      return `${p.creator ?? "Someone"} added a task: ${p.title ?? ""}${p.assignee ? ` (for ${p.assignee})` : ""}`;
+    case "NOTE_CREATED":
+      return `${p.author ?? "Someone"} posted an idea: ${p.preview ?? ""}`;
+    case "DM_EVENT":
+      return `Drum major event: ${p.title ?? ""}${p.when ? ` (${p.when})` : ""}`;
     default:
       return type;
   }
