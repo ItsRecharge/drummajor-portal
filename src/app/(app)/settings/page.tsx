@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ProfileForm, PasswordForm, EmailForm, LogoutOthers } from "./settings-forms";
 import { DriveSettings } from "./drive-forms";
+import { SmtpSettings } from "./smtp-forms";
+import { getSmtpConfig } from "@/lib/email";
 import { isAdmin } from "@/lib/roles";
 import { getDriveItem, getRootFolderId, getServiceAccountEmail, isDriveConfigured } from "@/lib/drive";
 
@@ -16,6 +18,7 @@ export default async function SettingsPage() {
   // Admin-only Drive card. Resolving the root folder's name hits the Drive API;
   // failures are shown inline rather than breaking the page.
   const admin = isAdmin(user.role);
+  const smtp = admin ? await getSmtpConfig() : null;
   let drive: { configured: boolean; saEmail: string | null; rootId: string | null; rootName: string | null; rootError: string | null } | null = null;
   if (admin) {
     const [configured, saEmail, rootId] = await Promise.all([isDriveConfigured(), getServiceAccountEmail(), getRootFolderId()]);
@@ -68,6 +71,27 @@ export default async function SettingsPage() {
           <EmailForm currentEmail={user.email} />
         </CardContent>
       </Card>
+
+      {admin ? (
+        <Card className="border-t-2 border-t-primary">
+          <CardHeader>
+            <CardTitle>Email (band Gmail)</CardTitle>
+            <CardDescription>
+              Announcements, invites, and password resets all go out from this account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SmtpSettings
+              configured={!!smtp}
+              host={smtp?.host ?? ""}
+              port={smtp?.port ?? 587}
+              user={smtp?.user ?? ""}
+              fromName={smtp?.fromName ?? ""}
+              myEmail={user.email}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {drive ? (
         <Card className="border-t-2 border-t-primary">

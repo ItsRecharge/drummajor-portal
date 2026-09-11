@@ -168,6 +168,10 @@ export default async function GuidePage() {
           <li>
             Lost a device? <em>Settings</em> → <em>Log out other devices</em>.
           </li>
+          <li>
+            <strong>Band Gmail changed its app password?</strong> Admins fix it under <em>Settings</em> →{" "}
+            <em>Email</em>, then use &ldquo;Send a test email to me&rdquo;. Same page for the Google Drive folder.
+          </li>
         </ul>
       </Section>
 

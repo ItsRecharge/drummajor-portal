@@ -19,9 +19,10 @@ import { Role } from "@/generated/prisma/client";
 import { getSession, destroyOtherSessions } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { randomToken, expiresInHours } from "@/lib/tokens";
-import { verificationEmail, sendMail } from "@/lib/email";
+import { verificationEmail, sendMail, sendTestEmail, getSmtpConfig, type SmtpConfig } from "@/lib/email";
 import { parseForm, type ActionState } from "@/lib/form";
-import { profileSchema, changePasswordSchema, changeEmailSchema } from "@/lib/validation";
+import { z } from "zod";
+import { profileSchema, changePasswordSchema, changeEmailSchema, smtpSchema } from "@/lib/validation";
 
 export async function updateProfileAction(
   _prev: ActionState,
@@ -192,4 +193,48 @@ export async function updateDriveCredentialsAction(_prev: ActionState, formData:
   await logAudit({ actorId: user.id, action: "DRIVE_CREDENTIALS_UPDATED", target: json.client_email });
   revalidatePath("/settings");
   return { success: true, message: `Service account updated (${json.client_email}). Share the Drive folder with it.` };
+}
+
+// ---------------------------------------------------------------------------
+// Email / SMTP (admin only): view what's configured, rotate the app password,
+// send a test to yourself. Mirrors the setup wizard so it survives graduation.
+// ---------------------------------------------------------------------------
+
+const smtpUpdateSchema = smtpSchema.extend({
+  // Blank = keep the password already on file.
+  appPassword: z.string().optional(),
+});
+
+export async function saveSmtpSettingsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user } = await requireRole(...ADMIN_ONLY);
+  const parsed = parseForm(smtpUpdateSchema, formData);
+  if (!parsed.ok) return parsed.state;
+  const current = await getSmtpConfig();
+  const appPassword = parsed.data.appPassword?.trim() || current?.appPassword;
+  if (!appPassword) return { fieldErrors: { appPassword: "Enter the Gmail app password." } };
+
+  const cfg: SmtpConfig = {
+    host: parsed.data.host,
+    port: parsed.data.port,
+    user: parsed.data.user,
+    appPassword,
+    fromName: parsed.data.fromName?.trim() || undefined,
+  };
+  const id = await ensureAppSettings();
+  await prisma.appSettings.update({ where: { id }, data: { smtpConfigEnc: encryptJson(cfg) } });
+  await logAudit({ actorId: user.id, action: "SMTP_UPDATED", target: cfg.user });
+  revalidatePath("/settings");
+  return { success: true, message: `Email settings saved for ${cfg.user}.` };
+}
+
+export async function testSmtpSettingsAction(_prev: ActionState, _formData: FormData): Promise<ActionState> {
+  const { user } = await requireRole(...ADMIN_ONLY);
+  const cfg = await getSmtpConfig();
+  if (!cfg) return { error: "Email isn't configured yet — fill in the form above first." };
+  try {
+    await sendTestEmail(cfg, user.email);
+    return { success: true, message: `Test email sent from ${cfg.user} to ${user.email}. Check your inbox (and spam).` };
+  } catch (err) {
+    return { error: `Gmail rejected the send: ${err instanceof Error ? err.message : String(err)}` };
+  }
 }
