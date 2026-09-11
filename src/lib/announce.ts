@@ -5,7 +5,7 @@ import { randomToken, isExpired } from "@/lib/tokens";
 import { resolveGroupMemberIds } from "@/lib/groups";
 import { getLeadershipEmails } from "@/lib/leadership";
 import { shareAnyoneWithLink, isDriveConfigured } from "@/lib/drive";
-import { absolutizeImageSrc } from "@/lib/sanitize";
+import { absolutizeImageSrc, escapeHtml } from "@/lib/sanitize";
 
 // How many recipients to send per scheduler tick. With a 1-minute tick this paces
 // delivery (a full ~150-person send finishes over a few minutes) and stays well
@@ -109,7 +109,7 @@ async function buildMusicAttachments(announcementId: string): Promise<MusicAttac
     if (!libraryItem.driveId) continue;
     try {
       const url = libraryItem.webViewLink ?? (await shareAnyoneWithLink(libraryItem.driveId));
-      linkItems.push(`<li><a href="${url}">${libraryItem.name}</a></li>`);
+      linkItems.push(`<li><a href="${escapeHtml(url)}">${escapeHtml(libraryItem.name)}</a></li>`);
     } catch {
       // Skip an item we can't share rather than failing the whole send.
     }
@@ -162,6 +162,7 @@ export async function processQueue(): Promise<void> {
 
     const transport = buildTransport(cfg);
     const music = await buildMusicAttachments(ann.id);
+    const org = await prisma.organization.findFirst({ select: { bandName: true } });
 
     for (const d of pending) {
       try {
@@ -169,6 +170,7 @@ export async function processQueue(): Promise<void> {
           bodyHtml: absolutizeImageSrc(ann.bodyHtml, appBaseUrl()),
           pixelUrl: `${appBaseUrl()}/t/${d.trackingToken}.gif`,
           linksHtml: music.linksHtml,
+          bandName: org?.bandName,
         });
         await transport.sendMail({
           from: fromHeader(cfg),

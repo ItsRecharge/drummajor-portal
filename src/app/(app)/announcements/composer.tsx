@@ -14,25 +14,49 @@ import { SaveTemplateDialog } from "./save-template-dialog";
 export type GroupOption = { id: string; name: string; count: number };
 export type { MusicOption };
 export type TemplateOption = { id: string; subject: string; bodyHtml: string; name: string };
+// Existing draft being edited (all ids/HTML come from the server page).
+export type ComposerInitial = {
+  id: string;
+  subject: string;
+  bodyHtml: string;
+  groupIds: string[];
+  musicIds: string[];
+  scheduledAt: string | null; // ISO
+};
+
+function toLocalInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 // Email-client-style composer: template picker, To-chips, subject, rich body
-// with inline images, music attachments, and send/schedule/draft actions.
+// with inline images and @music mentions, music attachments, send/schedule/draft.
 export function Composer({
   groups,
   music,
   templates,
+  initial,
+  initialTemplateId,
 }: {
   groups: GroupOption[];
   music: MusicOption[];
   templates: TemplateOption[];
+  initial?: ComposerInitial;
+  initialTemplateId?: string;
 }) {
   const [state, formAction, pending] = useActionState(composeAction, emptyState);
+  const startTpl = initialTemplateId ? templates.find((t) => t.id === initialTemplateId) : undefined;
   // Subject and body are tracked in state so templates can fill them and the
   // Save-as-template dialog can snapshot them mid-edit.
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [bodyInit, setBodyInit] = useState("");
+  const [subject, setSubject] = useState(initial?.subject ?? startTpl?.subject ?? "");
+  const [body, setBody] = useState(initial?.bodyHtml ?? startTpl?.bodyHtml ?? "");
+  const [bodyInit, setBodyInit] = useState(initial?.bodyHtml ?? startTpl?.bodyHtml ?? "");
   const [bodyKey, setBodyKey] = useState(0);
+  const [mentionIds, setMentionIds] = useState<string[]>([]);
+  const selectedGroups = new Set(initial?.groupIds ?? []);
 
   function applyTemplate(id: string) {
     const tpl = templates.find((t) => t.id === id);
@@ -52,12 +76,14 @@ export function Composer({
   return (
     // Do not add onSubmit here — SaveTemplateDialog renders a portaled <form> whose submit events bubble through the React tree, not the DOM.
     <form action={formAction} className="grid gap-5">
+      {initial ? <input type="hidden" name="announcementId" value={initial.id} /> : null}
+
       {templates.length > 0 ? (
         <div className="grid gap-1.5">
           <Label htmlFor="template">Start from a template</Label>
           <select
             id="template"
-            defaultValue=""
+            defaultValue={initialTemplateId ?? ""}
             onChange={(e) => applyTemplate(e.target.value)}
             className="h-9 rounded-md border bg-transparent px-3 text-sm"
           >
@@ -79,11 +105,20 @@ export function Composer({
               key={g.id}
               className="cursor-pointer rounded-full border px-3 py-1 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2"
             >
-              <input type="checkbox" name="groupIds" value={g.id} className="sr-only" />
+              <input
+                type="checkbox"
+                name="groupIds"
+                value={g.id}
+                defaultChecked={selectedGroups.has(g.id)}
+                className="sr-only"
+              />
               {g.name} ({g.count})
             </label>
           ))}
         </div>
+        <p className="text-xs text-muted-foreground">
+          Drum majors and admins always get a copy. Anyone in two groups is emailed once.
+        </p>
       </fieldset>
 
       <div className="grid gap-1.5">
@@ -106,10 +141,16 @@ export function Composer({
         <RichText
           key={`body-${bodyKey}`}
           name="bodyHtml"
-          defaultValue={bodyInit}
+          initialHtml={bodyInit}
           onChange={setBody}
           onImageUpload={handleImageUpload}
+          mentionItems={music}
+          onMentionsChange={setMentionIds}
         />
+        <p className="text-xs text-muted-foreground">
+          Type <kbd className="rounded border bg-muted px-1 font-mono">@</kbd> to mention a piece from the
+          Library — it&apos;s attached to the email automatically.
+        </p>
         {state.fieldErrors?.bodyHtml ? (
           <p className="text-sm text-destructive">{state.fieldErrors.bodyHtml}</p>
         ) : null}
@@ -118,7 +159,7 @@ export function Composer({
       {music.length > 0 ? (
         <div className="grid gap-1.5">
           <Label>Attach music (optional)</Label>
-          <MusicPicker options={music} />
+          <MusicPicker options={music} initialSelected={initial?.musicIds ?? []} locked={mentionIds} />
         </div>
       ) : null}
 
@@ -126,6 +167,7 @@ export function Composer({
         label="Schedule for later (optional)"
         name="scheduledAt"
         type="datetime-local"
+        defaultValue={toLocalInput(initial?.scheduledAt)}
         error={state.fieldErrors?.scheduledAt}
       />
 
@@ -139,7 +181,7 @@ export function Composer({
           Schedule
         </Button>
         <Button type="submit" name="intent" value="draft" variant="outline" disabled={pending}>
-          Save draft
+          {initial ? "Save draft" : "Save as draft"}
         </Button>
         <SaveTemplateDialog subject={subject} bodyHtml={body} />
       </div>

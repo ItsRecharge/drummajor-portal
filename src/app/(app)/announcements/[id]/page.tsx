@@ -7,7 +7,8 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { statusLabel } from "../status";
-import { approveAction, deleteAnnouncementAction } from "../actions";
+import { approveAction } from "../actions";
+import { DraftActions, CancelScheduledButton } from "../row-actions";
 
 export default async function AnnouncementDetailPage({
   params,
@@ -90,13 +91,9 @@ export default async function AnnouncementDetailPage({
             <Button type="submit">Approve &amp; release</Button>
           </form>
         ) : null}
-        {ann.status === AnnouncementStatus.DRAFT ? (
-          <form action={deleteAnnouncementAction}>
-            <input type="hidden" name="announcementId" value={ann.id} />
-            <Button type="submit" variant="outline">
-              Delete draft
-            </Button>
-          </form>
+        {ann.status === AnnouncementStatus.DRAFT ? <DraftActions id={ann.id} subject={ann.subject} /> : null}
+        {ann.status === AnnouncementStatus.SCHEDULED || ann.status === AnnouncementStatus.PENDING_APPROVAL ? (
+          <CancelScheduledButton id={ann.id} subject={ann.subject} />
         ) : null}
         <Link href="/announcements" className={buttonVariants({ variant: "ghost" })}>
           Back
