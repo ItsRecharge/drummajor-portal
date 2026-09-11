@@ -4,7 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { decryptJson } from "@/lib/crypto";
 
 // Google Drive access for the music library. Credentials are the service-account
-// JSON captured in the setup wizard, stored encrypted in AppSettings.driveConfigEnc.
+// JSON captured in the setup wizard (or re-uploaded in Settings), stored
+// encrypted in AppSettings.driveConfigEnc. The library root is the band's own
+// "Band Music Database" folder, shared with the service account and set in
+// Settings; when unset, a "Band Library" folder is created lazily instead.
 // A bare service account has no usable My Drive quota, so real deployments use a
 // Shared Drive or domain-wide delegation (an `impersonate` subject in the JSON);
 // supportsAllDrives is set on every call to cover the Shared-Drive case.
@@ -16,10 +19,20 @@ type ServiceAccount = {
 };
 
 const ROOT_FOLDER_NAME = "Band Library";
+export const FOLDER_MIME = "application/vnd.google-apps.folder";
 
 export async function isDriveConfigured(): Promise<boolean> {
   const s = await prisma.appSettings.findFirst({ select: { driveConfigEnc: true } });
   return !!s?.driveConfigEnc;
+}
+
+// Accepts a bare folder id or any Drive folder URL and returns the id.
+export function parseDriveFolderId(input: string): string | null {
+  const s = input.trim();
+  if (!s) return null;
+  const m = /\/folders\/([A-Za-z0-9_-]+)/.exec(s) ?? /[?&]id=([A-Za-z0-9_-]+)/.exec(s);
+  if (m) return m[1];
+  return /^[A-Za-z0-9_-]{10,}$/.test(s) ? s : null;
 }
 
 function driveClient(sa: ServiceAccount): drive_v3.Drive {
@@ -38,12 +51,18 @@ async function getDrive(): Promise<drive_v3.Drive> {
   return driveClient(decryptJson<ServiceAccount>(s.driveConfigEnc));
 }
 
+export async function getServiceAccountEmail(): Promise<string | null> {
+  const s = await prisma.appSettings.findFirst({ select: { driveConfigEnc: true } });
+  if (!s?.driveConfigEnc) return null;
+  return decryptJson<ServiceAccount>(s.driveConfigEnc).client_email ?? null;
+}
+
 export async function createFolder(name: string, parentId?: string): Promise<string> {
   const drive = await getDrive();
   const res = await drive.files.create({
     requestBody: {
       name,
-      mimeType: "application/vnd.google-apps.folder",
+      mimeType: FOLDER_MIME,
       parents: parentId ? [parentId] : undefined,
     },
     fields: "id",
@@ -52,8 +71,14 @@ export async function createFolder(name: string, parentId?: string): Promise<str
   return res.data.id!;
 }
 
-// Lazily create + remember the root "Band Library" folder so the wizard doesn't
-// have to. Returns the stored id when one already exists.
+// The configured root folder id, or null when none is set yet.
+export async function getRootFolderId(): Promise<string | null> {
+  const s = await prisma.appSettings.findFirst({ select: { driveRootFolderId: true } });
+  return s?.driveRootFolderId ?? null;
+}
+
+// Returns the configured root, creating a "Band Library" folder only when none
+// has been set (fresh installs before Settings → Google Drive is filled in).
 export async function ensureRootFolder(): Promise<string> {
   const settings = await prisma.appSettings.findFirst({
     select: { id: true, driveRootFolderId: true },
@@ -64,23 +89,6 @@ export async function ensureRootFolder(): Promise<string> {
   await prisma.appSettings.update({
     where: { id: settings.id },
     data: { driveRootFolderId: folderId },
-  });
-  return folderId;
-}
-
-// Lazily create + remember a "Document Vault" folder under the Band Library root,
-// kept separate from the per-piece music folders (Stage 7 document vault).
-export async function ensureVaultFolder(): Promise<string> {
-  const settings = await prisma.appSettings.findFirst({
-    select: { id: true, vaultRootFolderId: true },
-  });
-  if (!settings) throw new Error("App settings missing");
-  if (settings.vaultRootFolderId) return settings.vaultRootFolderId;
-  const root = await ensureRootFolder();
-  const folderId = await createFolder("Document Vault", root);
-  await prisma.appSettings.update({
-    where: { id: settings.id },
-    data: { vaultRootFolderId: folderId },
   });
   return folderId;
 }
@@ -101,43 +109,53 @@ export async function uploadFile(opts: {
   return { id: res.data.id!, sizeBytes: Number(res.data.size ?? opts.buffer.length) };
 }
 
-export async function getFileBuffer(
-  fileId: string,
-): Promise<{ buffer: Buffer; mimeType: string; name: string }> {
+// Replace an existing file's bytes in place (keeps its id and sharing).
+export async function updateFileContent(fileId: string, mimeType: string, buffer: Buffer): Promise<void> {
   const drive = await getDrive();
-  const meta = await drive.files.get({
+  await drive.files.update({
     fileId,
-    fields: "name,mimeType",
+    media: { mimeType, body: Readable.from(buffer) },
     supportsAllDrives: true,
   });
-  const res = await drive.files.get(
-    { fileId, alt: "media", supportsAllDrives: true },
-    { responseType: "arraybuffer" },
-  );
-  return {
-    buffer: Buffer.from(res.data as ArrayBuffer),
-    mimeType: meta.data.mimeType ?? "application/octet-stream",
-    name: meta.data.name ?? "file",
-  };
 }
 
-export async function getFileStream(
-  fileId: string,
-): Promise<{ stream: Readable; mimeType: string; name: string }> {
+export async function renameDriveItem(fileId: string, name: string): Promise<void> {
   const drive = await getDrive();
-  const meta = await drive.files.get({
+  await drive.files.update({ fileId, requestBody: { name }, supportsAllDrives: true });
+}
+
+export async function moveDriveItem(fileId: string, fromParentId: string, toParentId: string): Promise<void> {
+  if (fromParentId === toParentId) return;
+  const drive = await getDrive();
+  await drive.files.update({
     fileId,
-    fields: "name,mimeType",
+    addParents: toParentId,
+    removeParents: fromParentId,
     supportsAllDrives: true,
   });
-  const res = await drive.files.get(
-    { fileId, alt: "media", supportsAllDrives: true },
-    { responseType: "stream" },
-  );
+}
+
+export type DriveItemMeta = {
+  id: string;
+  name: string;
+  mimeType: string;
+  isFolder: boolean;
+  webViewLink: string | null;
+};
+
+export async function getDriveItem(fileId: string): Promise<DriveItemMeta> {
+  const drive = await getDrive();
+  const res = await drive.files.get({
+    fileId,
+    fields: "id,name,mimeType,webViewLink",
+    supportsAllDrives: true,
+  });
   return {
-    stream: res.data as unknown as Readable,
-    mimeType: meta.data.mimeType ?? "application/octet-stream",
-    name: meta.data.name ?? "file",
+    id: res.data.id ?? fileId,
+    name: res.data.name ?? "Untitled",
+    mimeType: res.data.mimeType ?? "application/octet-stream",
+    isFolder: res.data.mimeType === FOLDER_MIME,
+    webViewLink: res.data.webViewLink ?? null,
   };
 }
 
@@ -149,28 +167,6 @@ export async function shareAnyoneWithLink(fileId: string): Promise<string> {
     requestBody: { role: "reader", type: "anyone" },
     supportsAllDrives: true,
   });
-  const res = await drive.files.get({
-    fileId,
-    fields: "webViewLink",
-    supportsAllDrives: true,
-  });
-  return res.data.webViewLink ?? `https://drive.google.com/file/d/${fileId}/view`;
-}
-
-export async function shareWithUser(fileId: string, email: string): Promise<void> {
-  const drive = await getDrive();
-  await drive.permissions.create({
-    fileId,
-    requestBody: { role: "reader", type: "user", emailAddress: email },
-    sendNotificationEmail: false,
-    supportsAllDrives: true,
-  });
-}
-
-// Fetch a file/folder's shareable webViewLink (without changing permissions).
-// Used to lazily backfill links for items migrated from the old Music/Vault tables.
-export async function getWebViewLink(fileId: string): Promise<string> {
-  const drive = await getDrive();
   const res = await drive.files.get({
     fileId,
     fields: "webViewLink",
@@ -194,8 +190,19 @@ export type DriveChild = {
   sizeBytes: number | null;
 };
 
-// List the immediate children of a Drive folder, for the "Refresh from Drive"
-// reconcile. Pages through all results.
+function toChild(f: drive_v3.Schema$File): DriveChild {
+  const isFolder = f.mimeType === FOLDER_MIME;
+  return {
+    driveId: f.id!,
+    name: f.name ?? "Untitled",
+    isFolder,
+    mimeType: f.mimeType ?? "application/octet-stream",
+    webViewLink: f.webViewLink ?? null,
+    sizeBytes: f.size ? Number(f.size) : null,
+  };
+}
+
+// List the immediate children of a Drive folder. Pages through all results.
 export async function listFolderChildren(folderId: string): Promise<DriveChild[]> {
   const drive = await getDrive();
   const out: DriveChild[] = [];
@@ -209,18 +216,22 @@ export async function listFolderChildren(folderId: string): Promise<DriveChild[]
       includeItemsFromAllDrives: true,
       pageToken,
     });
-    for (const f of res.data.files ?? []) {
-      const isFolder = f.mimeType === "application/vnd.google-apps.folder";
-      out.push({
-        driveId: f.id!,
-        name: f.name ?? "Untitled",
-        isFolder,
-        mimeType: f.mimeType ?? "application/octet-stream",
-        webViewLink: f.webViewLink ?? null,
-        sizeBytes: f.size ? Number(f.size) : null,
-      });
-    }
+    for (const f of res.data.files ?? []) out.push(toChild(f));
     pageToken = res.data.nextPageToken ?? undefined;
   } while (pageToken);
   return out;
+}
+
+export async function findChildByName(parentId: string, name: string): Promise<DriveChild | null> {
+  const drive = await getDrive();
+  const escaped = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const res = await drive.files.list({
+    q: `'${parentId}' in parents and name = '${escaped}' and trashed = false`,
+    fields: "files(id, name, mimeType, webViewLink, size)",
+    pageSize: 5,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+  const f = res.data.files?.[0];
+  return f ? toChild(f) : null;
 }

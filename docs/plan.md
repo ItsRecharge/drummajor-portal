@@ -371,7 +371,7 @@ real Postgres instead, set `DATABASE_URL` and `npx prisma migrate deploy`.
 > `/handoff` all serve (auth-gated). Live Drive upload/preview for the vault verifies on the
 > server with real service-account creds (same caveat as Stage 4).
 
-### Sep 2026 revamp — IN PROGRESS
+### Sep 2026 revamp — CODE COMPLETE (live Drive/SMTP verification pending on the server)
 
 Spec: `docs/superpowers/specs/2026-09-10-portal-revamp-design.md`. Five phases:
 1. Shell + theme (Winchester red/black, light default + dark toggle), grouped sidebar, Handoff/Quick start in user menu, `/guide`, dashboard open-tasks fix (includes unassigned), toasts.
@@ -379,3 +379,27 @@ Spec: `docs/superpowers/specs/2026-09-10-portal-revamp-design.md`. Five phases:
 3. Announcements: Drafts/Scheduled/Sent sections, templates page, draft edit, cancel scheduled, Tiptap editor with `@` music mentions.
 4. Events split into Band vs Drum Major (email + .ics), task/idea creation emails.
 5. Library: Drive root = `Band Music Database`, recursive sync, `MusicPiece` catalog, part-file naming, `index.csv`, Add-music flow.
+
+All five phases are implemented on `feat/revamp-sep-2026` (one commit each) and verified
+locally with Playwright against PGlite: theme/nav/guide, Classroom roster import (29 + 99
+students from the real saves, 19 shared), announcements (Tiptap editor, @mentions, drafts,
+schedule/cancel, templates), band vs drum-major events (.ics), task/idea emails, and the
+music catalog (Add music → concert-order part names, edit cascades, search, index.csv).
+
+Still to verify on the music-dept server (needs real credentials):
+- Settings → Google Drive: paste the `Band Music Database` folder, Test access, Sync now →
+  pieces appear with parsed titles/credits, `index.csv` is written at the root.
+- Add music pushes `Category/Title - arr. Name/Title - Part.pdf` to Drive; Edit details renames
+  in Drive; Delete removes from Drive.
+- Announcement send: drum majors + admins receive a copy exactly once; music links resolve.
+- Drum-major event email carries a calendar invite; task/idea emails arrive.
+
+Dev notes:
+- Build locally with a throwaway Postgres URL so build workers never open PGlite:
+  `DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build`.
+- Under `next dev`, the instrumentation bundle and the app each open the PGlite data dir;
+  overlapping queries can log `RuntimeError: Aborted()` (harmless, dev-only). If `.pglite`
+  ever refuses to start, delete it and re-run the wizard — it only holds test data.
+- Follow-up questions: every pushed Drive item is still shared "anyone with the link"
+  (needed for off-domain recipients); the `@mention` attachment criteria are the basic
+  "mention = attach the piece folder link" for now.

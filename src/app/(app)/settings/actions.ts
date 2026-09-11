@@ -2,7 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireRole } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
+import { encryptJson } from "@/lib/crypto";
+import { ensureAppSettings } from "@/lib/settings";
+import { syncDriveTree } from "@/lib/library-sync";
+import {
+  getDriveItem,
+  getRootFolderId,
+  getServiceAccountEmail,
+  isDriveConfigured,
+  listFolderChildren,
+  parseDriveFolderId,
+} from "@/lib/drive";
+import { Role } from "@/generated/prisma/client";
 import { getSession, destroyOtherSessions } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { randomToken, expiresInHours } from "@/lib/tokens";
@@ -90,4 +103,93 @@ export async function logoutOtherDevicesAction(
   const count = await destroyOtherSessions(user.id, session.sessionToken);
   revalidatePath("/settings");
   return { success: true, message: `Signed out ${count} other device(s).` };
+}
+
+// ---------------------------------------------------------------------------
+// Google Drive (admin only): root folder, access test, manual sync, credentials.
+// ---------------------------------------------------------------------------
+
+const ADMIN_ONLY = [Role.ADMIN] as const;
+
+export async function saveDriveRootAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user } = await requireRole(...ADMIN_ONLY);
+  const raw = String(formData.get("root") ?? "");
+  const folderId = parseDriveFolderId(raw);
+  if (!folderId) return { fieldErrors: { root: "Paste the folder's Drive URL or its id." } };
+
+  let name = folderId;
+  if (await isDriveConfigured()) {
+    try {
+      const meta = await getDriveItem(folderId);
+      if (!meta.isFolder) return { fieldErrors: { root: "That id points to a file, not a folder." } };
+      name = meta.name;
+    } catch {
+      const sa = await getServiceAccountEmail();
+      return {
+        fieldErrors: {
+          root: `The service account can't see that folder. Share it with ${sa ?? "the service account"} (Editor) and try again.`,
+        },
+      };
+    }
+  }
+  const id = await ensureAppSettings();
+  await prisma.appSettings.update({ where: { id }, data: { driveRootFolderId: folderId, driveIndexFileId: null } });
+  await logAudit({ actorId: user.id, action: "DRIVE_ROOT_CHANGED", target: name, metadata: { folderId } });
+  revalidatePath("/settings");
+  revalidatePath("/library", "layout");
+  return { success: true, message: `Root folder set to “${name}”. Run “Sync now” to import it.` };
+}
+
+export async function testDriveAction(_prev: ActionState, _formData: FormData): Promise<ActionState> {
+  await requireRole(...ADMIN_ONLY);
+  if (!(await isDriveConfigured())) return { error: "Upload the service-account JSON first." };
+  const root = await getRootFolderId();
+  if (!root) return { error: "Set the root folder first." };
+  try {
+    const children = await listFolderChildren(root);
+    const folders = children.filter((c) => c.isFolder).map((c) => c.name);
+    const files = children.length - folders.length;
+    return {
+      success: true,
+      message: `Access OK. ${folders.length} folder${folders.length === 1 ? "" : "s"} (${folders.slice(0, 12).join(", ")}${folders.length > 12 ? ", …" : ""}) and ${files} file${files === 1 ? "" : "s"} at the top level.`,
+    };
+  } catch (err) {
+    const sa = await getServiceAccountEmail();
+    return { error: `Drive said: ${err instanceof Error ? err.message : String(err)}. Is the folder shared with ${sa ?? "the service account"}?` };
+  }
+}
+
+export async function syncDriveNowAction(_prev: ActionState, _formData: FormData): Promise<ActionState> {
+  const { user } = await requireRole(...ADMIN_ONLY);
+  try {
+    const r = await syncDriveTree();
+    await logAudit({ actorId: user.id, action: "LIBRARY_SYNCED", metadata: r });
+    revalidatePath("/library", "layout");
+    return {
+      success: true,
+      message: `Synced: ${r.added} added, ${r.updated} updated, ${r.removed} removed, ${r.pieces} pieces catalogued. index.csv regenerated.`,
+    };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Sync failed." };
+  }
+}
+
+export async function updateDriveCredentialsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user } = await requireRole(...ADMIN_ONLY);
+  const file = formData.get("serviceAccount");
+  if (!(file instanceof File) || file.size === 0) return { fieldErrors: { serviceAccount: "Choose the JSON key file." } };
+  let json: { client_email?: string; private_key?: string };
+  try {
+    json = JSON.parse(await file.text());
+  } catch {
+    return { fieldErrors: { serviceAccount: "Not valid JSON." } };
+  }
+  if (!json.client_email || !json.private_key) {
+    return { fieldErrors: { serviceAccount: "Missing client_email / private_key." } };
+  }
+  const id = await ensureAppSettings();
+  await prisma.appSettings.update({ where: { id }, data: { driveConfigEnc: encryptJson(json) } });
+  await logAudit({ actorId: user.id, action: "DRIVE_CREDENTIALS_UPDATED", target: json.client_email });
+  revalidatePath("/settings");
+  return { success: true, message: `Service account updated (${json.client_email}). Share the Drive folder with it.` };
 }

@@ -3,12 +3,33 @@ import { getSession, listSessions } from "@/lib/session";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProfileForm, PasswordForm, EmailForm, LogoutOthers } from "./settings-forms";
+import { DriveSettings } from "./drive-forms";
+import { isAdmin } from "@/lib/roles";
+import { getDriveItem, getRootFolderId, getServiceAccountEmail, isDriveConfigured } from "@/lib/drive";
 
 export const metadata = { title: "Settings — Drum Major Portal" };
 
 export default async function SettingsPage() {
   const { user } = await requireAuth();
   const [current, sessions] = await Promise.all([getSession(), listSessions(user.id)]);
+
+  // Admin-only Drive card. Resolving the root folder's name hits the Drive API;
+  // failures are shown inline rather than breaking the page.
+  const admin = isAdmin(user.role);
+  let drive: { configured: boolean; saEmail: string | null; rootId: string | null; rootName: string | null; rootError: string | null } | null = null;
+  if (admin) {
+    const [configured, saEmail, rootId] = await Promise.all([isDriveConfigured(), getServiceAccountEmail(), getRootFolderId()]);
+    let rootName: string | null = null;
+    let rootError: string | null = null;
+    if (configured && rootId) {
+      try {
+        rootName = (await getDriveItem(rootId)).name;
+      } catch (err) {
+        rootError = err instanceof Error ? err.message : "could not read the folder";
+      }
+    }
+    drive = { configured, saEmail, rootId, rootName, rootError };
+  }
 
   return (
     <div className="grid gap-6">
@@ -47,6 +68,20 @@ export default async function SettingsPage() {
           <EmailForm currentEmail={user.email} />
         </CardContent>
       </Card>
+
+      {drive ? (
+        <Card className="border-t-2 border-t-primary">
+          <CardHeader>
+            <CardTitle>Google Drive</CardTitle>
+            <CardDescription>
+              Where the music library lives. Point this at the band&apos;s <strong>Band Music Database</strong> folder.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DriveSettings {...drive} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
