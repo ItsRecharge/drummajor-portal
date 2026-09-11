@@ -22,10 +22,15 @@ sudo mkdir -p /opt/drummajor-portal
 # clone or copy the repo into /opt/drummajor-portal, owned by the `portal` user
 sudo useradd --system --home /opt/drummajor-portal portal   # if not present
 cd /opt/drummajor-portal
-npm ci
+npm ci --include=dev             # build needs devDependencies even with NODE_ENV=production
 npx prisma migrate deploy        # apply migrations
-npm run build
+npm run build                    # runs `prisma generate` first (src/generated/prisma is gitignored)
 ```
+
+Run these as the `portal`/service user, not root — a root-owned `.next` or
+`node_modules` breaks the next automatic rebuild. After pulling new code by
+hand, repeat the three commands above (or just restart the service:
+`deploy/update-and-run.sh` does them when the branch moved).
 
 ## Secrets / environment
 
