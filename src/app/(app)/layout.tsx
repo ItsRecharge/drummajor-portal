@@ -4,7 +4,7 @@ import { Bell } from "lucide-react";
 import { requireAuth } from "@/lib/auth";
 import { isSetupComplete } from "@/lib/settings";
 import { unreadCount } from "@/lib/notify";
-import { Role } from "@/generated/prisma/client";
+import { isAdmin, isLeadership, canManageMusic } from "@/lib/roles";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { AppSidebar } from "@/components/app-sidebar";
 import { UserMenu } from "@/components/user-menu";
@@ -14,9 +14,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!(await isSetupComplete())) redirect("/setup");
   const { user, impersonating } = await requireAuth();
 
-  const canInvite = user.role === Role.ADMIN || user.role === Role.DRUM_MAJOR;
-  const canMusic = canInvite || user.role === Role.LIBRARIAN;
-  const isAdmin = user.role === Role.ADMIN;
+  const canInvite = isLeadership(user.role);
+  const canMusic = canManageMusic(user.role);
+  const admin = isAdmin(user.role);
   const unread = await unreadCount(user.id);
 
   return (
@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppSidebar canInvite={canInvite} canMusic={canMusic} />
       <div className="flex min-h-full flex-1 flex-col">
         {impersonating ? <ImpersonationBanner targetName={user.name} /> : null}
-        <header className="flex items-center justify-end gap-2 border-b border-border px-4 py-2.5 pl-16 md:pl-4">
+        <header className="flex items-center justify-end gap-2 border-b border-border bg-card/60 px-4 py-2.5 pl-16 md:pl-4">
           <Link
             href="/notifications"
             aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}
@@ -40,7 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <UserMenu
             name={user.name}
             canInvite={canInvite}
-            isAdmin={isAdmin}
+            isAdmin={admin}
             logoutAction={logoutAction}
           />
         </header>

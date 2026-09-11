@@ -9,6 +9,8 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  Flag,
+  BookOpen,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,6 +21,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { ThemeMenuItems } from "@/components/theme-toggle";
 
 function initials(name: string) {
   return name
@@ -49,7 +52,7 @@ export function UserMenu({
         <span className="hidden max-w-32 truncate sm:inline">{name}</span>
         <ChevronDown className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={6} className="w-52">
+      <DropdownMenuContent align="end" sideOffset={6} className="w-56">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>
         </DropdownMenuGroup>
@@ -66,6 +69,12 @@ export function UserMenu({
             Invites
           </DropdownMenuItem>
         ) : null}
+        {canInvite ? (
+          <DropdownMenuItem render={<Link href="/handoff" />}>
+            <Flag />
+            Handoff
+          </DropdownMenuItem>
+        ) : null}
         {isAdmin ? (
           <DropdownMenuItem render={<Link href="/admin/users" />}>
             <ShieldCheck />
@@ -78,6 +87,12 @@ export function UserMenu({
             Logs
           </DropdownMenuItem>
         ) : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem render={<Link href="/guide" />}>
+          <BookOpen />
+          Quick start guide
+        </DropdownMenuItem>
+        <ThemeMenuItems />
         <DropdownMenuItem render={<Link href="/settings" />}>
           <Settings />
           Settings

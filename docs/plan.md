@@ -370,3 +370,12 @@ real Postgres instead, set `DATABASE_URL` and `npx prisma migrate deploy`.
 > dev server boots on PGlite with the new migration applied; `/notes`, `/vault`, `/audit`,
 > `/handoff` all serve (auth-gated). Live Drive upload/preview for the vault verifies on the
 > server with real service-account creds (same caveat as Stage 4).
+
+### Sep 2026 revamp — IN PROGRESS
+
+Spec: `docs/superpowers/specs/2026-09-10-portal-revamp-design.md`. Five phases:
+1. Shell + theme (Winchester red/black, light default + dark toggle), grouped sidebar, Handoff/Quick start in user menu, `/guide`, dashboard open-tasks fix (includes unassigned), toasts.
+2. Rosters: groups merged to Jazz Band / Concert-Marching Band / Everyone; Google Classroom "People" page import; clear roster; drum majors always cc'd.
+3. Announcements: Drafts/Scheduled/Sent sections, templates page, draft edit, cancel scheduled, Tiptap editor with `@` music mentions.
+4. Events split into Band vs Drum Major (email + .ics), task/idea creation emails.
+5. Library: Drive root = `Band Music Database`, recursive sync, `MusicPiece` catalog, part-file naming, `index.csv`, Add-music flow.

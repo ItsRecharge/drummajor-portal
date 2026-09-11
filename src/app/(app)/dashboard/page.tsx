@@ -1,9 +1,19 @@
 import Link from "next/link";
-import { CalendarDays, Megaphone, Music, ListChecks, Lightbulb, ChevronUp } from "lucide-react";
+import {
+  CalendarDays,
+  Megaphone,
+  Music,
+  ListChecks,
+  Lightbulb,
+  ChevronUp,
+  BookOpen,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { unreadCount } from "@/lib/notify";
 import { TaskStatus } from "@/generated/prisma/client";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { statusLabel } from "../announcements/status";
 
@@ -13,7 +23,14 @@ export default async function DashboardPage() {
   const { user } = await requireAuth();
   const now = new Date();
 
-  const [events, announcements, music, myTasks, ideas, unread, eventCount, openTaskCount] =
+  // "Open" = not completed AND (mine OR nobody's). Unassigned tasks are everyone's
+  // problem, so they show up for every leader until someone claims them.
+  const openTasksWhere = {
+    status: { not: TaskStatus.COMPLETED },
+    OR: [{ assigneeId: user.id }, { assigneeId: null }],
+  };
+
+  const [events, announcements, music, openTasks, ideas, unread, eventCount, openTaskCount] =
     await Promise.all([
       prisma.event.findMany({ where: { date: { gte: now } }, orderBy: { date: "asc" }, take: 5 }),
       prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
@@ -24,9 +41,10 @@ export default async function DashboardPage() {
         select: { id: true, name: true },
       }),
       prisma.task.findMany({
-        where: { assigneeId: user.id, status: { not: TaskStatus.COMPLETED } },
-        orderBy: { createdAt: "asc" },
-        take: 5,
+        where: openTasksWhere,
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        include: { assignee: { select: { name: true } } },
       }),
       prisma.note.findMany({
         orderBy: { votes: { _count: "desc" } },
@@ -35,9 +53,7 @@ export default async function DashboardPage() {
       }),
       unreadCount(user.id),
       prisma.event.count({ where: { date: { gte: now } } }),
-      prisma.task.count({
-        where: { assigneeId: user.id, status: { not: TaskStatus.COMPLETED } },
-      }),
+      prisma.task.count({ where: openTasksWhere }),
     ]);
 
   const today = now.toLocaleDateString(undefined, {
@@ -52,14 +68,24 @@ export default async function DashboardPage() {
     { value: openTaskCount, label: "Open tasks" },
   ];
 
+  const cardTitle = "flex items-center gap-2 text-sm uppercase tracking-wide";
+
   return (
     <div className="grid gap-6">
       {/* Scoreboard hero */}
-      <section className="field-grid rounded-lg border border-border bg-card/40 px-6 py-7">
-        <p className="eyebrow">Dashboard · {today}</p>
-        <h1 className="mt-1.5 text-3xl font-bold tracking-tight uppercase">
-          Welcome, {user.name}
-        </h1>
+      <section className="field-grid rounded-lg border border-border bg-card px-6 py-7">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="eyebrow">Dashboard · {today}</p>
+            <h1 className="mt-1.5 text-3xl font-bold tracking-tight uppercase">
+              Welcome, {user.name}
+            </h1>
+          </div>
+          <Link href="/guide" className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <BookOpen data-icon="inline-start" />
+            Quick start guide
+          </Link>
+        </div>
         <div className="mt-6 grid grid-cols-3 gap-4">
           {stats.map((s) => (
             <div key={s.label}>
@@ -72,10 +98,10 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="border-t-2 border-t-primary">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
+            <CardTitle className={cardTitle}>
               <CalendarDays className="size-4 text-primary" />
               Upcoming events
             </CardTitle>
@@ -85,7 +111,7 @@ export default async function DashboardPage() {
               <CardDescription>None scheduled.</CardDescription>
             ) : (
               events.map((e) => (
-                <div key={e.id} className="flex justify-between">
+                <div key={e.id} className="flex justify-between gap-2">
                   <span className="truncate">{e.title}</span>
                   <span className="shrink-0 text-muted-foreground">{e.date.toLocaleDateString()}</span>
                 </div>
@@ -96,7 +122,7 @@ export default async function DashboardPage() {
 
         <Card className="border-t-2 border-t-primary">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
+            <CardTitle className={cardTitle}>
               <Megaphone className="size-4 text-primary" />
               Recent announcements
             </CardTitle>
@@ -106,7 +132,7 @@ export default async function DashboardPage() {
               <CardDescription>None yet.</CardDescription>
             ) : (
               announcements.map((a) => (
-                <Link key={a.id} href={`/announcements/${a.id}`} className="flex justify-between hover:underline">
+                <Link key={a.id} href={`/announcements/${a.id}`} className="flex justify-between gap-2 hover:underline">
                   <span className="truncate">{a.subject}</span>
                   <span className="shrink-0 text-muted-foreground">{statusLabel(a.status)}</span>
                 </Link>
@@ -117,7 +143,39 @@ export default async function DashboardPage() {
 
         <Card className="border-t-2 border-t-primary">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
+            <CardTitle className={cardTitle}>
+              <ListChecks className="size-4 text-primary" />
+              <Link href="/tasks" className="hover:underline">
+                Open tasks
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-1.5 text-sm">
+            {openTasks.length === 0 ? (
+              <CardDescription>Nothing open. Nice.</CardDescription>
+            ) : (
+              openTasks.map((t) => (
+                <div key={t.id} className="flex items-center justify-between gap-2">
+                  <span className="truncate">{t.title}</span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {t.status === TaskStatus.IN_PROGRESS ? (
+                      <span className="text-xs text-muted-foreground">In progress</span>
+                    ) : null}
+                    {t.assignee ? (
+                      <Badge variant="outline">{t.assignee.name}</Badge>
+                    ) : (
+                      <Badge variant="secondary">Unassigned</Badge>
+                    )}
+                  </span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-t-2 border-t-primary">
+          <CardHeader>
+            <CardTitle className={cardTitle}>
               <Music className="size-4 text-primary" />
               Recent files
             </CardTitle>
@@ -137,30 +195,7 @@ export default async function DashboardPage() {
 
         <Card className="border-t-2 border-t-primary">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
-              <ListChecks className="size-4 text-primary" />
-              My tasks
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-1.5 text-sm">
-            {myTasks.length === 0 ? (
-              <CardDescription>Nothing assigned.</CardDescription>
-            ) : (
-              myTasks.map((t) => (
-                <div key={t.id} className="flex justify-between">
-                  <span className="truncate">{t.title}</span>
-                  <span className="shrink-0 text-muted-foreground">
-                    {t.status === TaskStatus.IN_PROGRESS ? "In progress" : "To do"}
-                  </span>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-t-2 border-t-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
+            <CardTitle className={cardTitle}>
               <Lightbulb className="size-4 text-primary" />
               Top ideas
             </CardTitle>
