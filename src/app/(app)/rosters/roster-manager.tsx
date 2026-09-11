@@ -1,8 +1,11 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Field } from "@/components/field";
 import { SubmitButton } from "@/components/submit-button";
 import {
@@ -15,6 +18,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -24,7 +37,13 @@ import {
 } from "@/components/ui/table";
 import { emptyState, type ActionState } from "@/lib/form";
 import { ContactForm, type EditableContact, type SelectableGroup } from "./contact-form";
-import { createGroupAction, deleteContactAction, deleteGroupAction } from "./actions";
+import {
+  clearGroupAction,
+  clearRosterAction,
+  createGroupAction,
+  deleteContactAction,
+  deleteGroupAction,
+} from "./actions";
 
 export type GroupRow = { id: string; name: string; builtIn: boolean; count: number };
 export type ContactRow = EditableContact;
@@ -117,7 +136,103 @@ function DeleteGroupButton({ groupId }: { groupId: string }) {
   );
 }
 
-export function GroupsManager({ groups }: { groups: GroupRow[] }) {
+// Toast + close an AlertDialog when its action reports back.
+function useActionToast(state: ActionState, onDone: () => void) {
+  useEffect(() => {
+    if (state.success) {
+      toast.success(state.message ?? "Done.");
+      onDone();
+    } else if (state.error) {
+      toast.error(state.error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+}
+
+function ClearGroupDialog({ group }: { group: GroupRow }) {
+  const [open, setOpen] = useState(false);
+  const [state, action] = useActionState(clearGroupAction, emptyState);
+  useActionToast(state, () => setOpen(false));
+  if (group.count === 0) return null;
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger render={<Button variant="ghost" size="sm" className="h-7 px-2" />}>
+        Remove all members
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Empty “{group.name}”?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Removes all {group.count} member{group.count === 1 ? "" : "s"} from this group. The contacts
+            themselves stay in the roster. Sent announcements are not affected.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <form action={action}>
+          <input type="hidden" name="groupId" value={group.id} />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <SubmitButton variant="destructive" pendingLabel="Removing…">
+              Remove {group.count}
+            </SubmitButton>
+          </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function ClearRosterDialog({ totalContacts }: { totalContacts: number }) {
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [state, action] = useActionState(clearRosterAction, emptyState);
+  useActionToast(state, () => {
+    setOpen(false);
+    setTyped("");
+  });
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger render={<Button variant="destructive" size="sm" disabled={totalContacts === 0} />}>
+        Clear entire roster
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear the whole roster?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Deletes all {totalContacts} contact{totalContacts === 1 ? "" : "s"} and their group memberships —
+            do this once a year before importing the new rosters. Sent announcements and their open
+            counts are kept. Drum majors keep their accounts.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <form action={action} className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="confirm-clear">
+              Type <span className="font-mono font-semibold">CLEAR</span> to confirm
+            </Label>
+            <Input
+              id="confirm-clear"
+              name="confirm"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              autoComplete="off"
+              aria-invalid={!!state.fieldErrors?.confirm}
+            />
+            {state.fieldErrors?.confirm ? (
+              <p className="text-sm text-destructive">{state.fieldErrors.confirm}</p>
+            ) : null}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button type="submit" variant="destructive" disabled={typed.trim() !== "CLEAR"}>
+              Delete {totalContacts} contact{totalContacts === 1 ? "" : "s"}
+            </Button>
+          </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+export function GroupsManager({ groups, totalContacts }: { groups: GroupRow[]; totalContacts: number }) {
   return (
     <div className="grid gap-4">
       <AddGroupForm />
@@ -138,12 +253,21 @@ export function GroupsManager({ groups }: { groups: GroupRow[] }) {
               </TableCell>
               <TableCell>{g.count}</TableCell>
               <TableCell className="text-right">
-                {g.builtIn ? null : <DeleteGroupButton groupId={g.id} />}
+                <div className="flex justify-end gap-1">
+                  {g.name === "Everyone" ? null : <ClearGroupDialog group={g} />}
+                  {g.builtIn ? null : <DeleteGroupButton groupId={g.id} />}
+                </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+        <p className="text-sm text-muted-foreground">
+          New school year? Clear everything, then import this year&apos;s rosters.
+        </p>
+        <ClearRosterDialog totalContacts={totalContacts} />
+      </div>
     </div>
   );
 }
@@ -151,16 +275,20 @@ export function GroupsManager({ groups }: { groups: GroupRow[] }) {
 export function ContactsManager({
   contacts,
   groups,
+  leadershipEmails,
 }: {
   contacts: ContactRow[];
   // All groups (for the filter, includes built-ins) and selectable groups (forms).
   groups: GroupRow[];
+  // Portal users (drum majors / admins) — flagged so nobody wonders about double emails.
+  leadershipEmails: string[];
 }) {
   const [filter, setFilter] = useState<string>("");
   const selectable: SelectableGroup[] = groups
     .filter((g) => g.name !== "Everyone")
     .map((g) => ({ id: g.id, name: g.name }));
   const groupNames = useMemo(() => new Map(groups.map((g) => [g.id, g.name])), [groups]);
+  const leaders = useMemo(() => new Set(leadershipEmails.map((e) => e.toLowerCase())), [leadershipEmails]);
 
   const visible = useMemo(
     () => (filter ? contacts.filter((c) => c.groupIds.includes(filter)) : contacts),
@@ -175,7 +303,7 @@ export function ContactsManager({
           onChange={(e) => setFilter(e.target.value)}
           className="border-input bg-transparent h-9 rounded-md border px-3 text-sm shadow-xs"
         >
-          <option value="">All contacts</option>
+          <option value="">All contacts ({contacts.length})</option>
           {selectable.map((g) => (
             <option key={g.id} value={g.id}>
               {g.name}
@@ -197,7 +325,14 @@ export function ContactsManager({
         <TableBody>
           {visible.map((c) => (
             <TableRow key={c.id}>
-              <TableCell>{c.name}</TableCell>
+              <TableCell>
+                {c.name}
+                {leaders.has(c.email.toLowerCase()) ? (
+                  <Badge variant="outline" className="ml-2">
+                    Drum major
+                  </Badge>
+                ) : null}
+              </TableCell>
               <TableCell>{c.email}</TableCell>
               <TableCell>{c.instrument || "—"}</TableCell>
               <TableCell>

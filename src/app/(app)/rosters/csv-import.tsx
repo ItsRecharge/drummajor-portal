@@ -79,7 +79,7 @@ export function CsvImport() {
           setResult(null);
         }}
         rows={6}
-        placeholder="Name,Email,Instrument,Group&#10;Jane Doe,jane@example.com,Flute,Marching"
+        placeholder="Name,Email,Instrument,Group&#10;Jane Doe,jane@example.com,Flute,Jazz Band"
       />
       <div className="flex gap-2">
         <Button type="button" onClick={runPreview} disabled={pending || !csv.trim()}>

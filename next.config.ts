@@ -6,9 +6,10 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite", "pglite-prisma-adapter"],
   experimental: {
     serverActions: {
-      // uploadImageAction accepts images up to 4MB; the default 1MB body limit
+      // uploadImageAction accepts images up to 4MB and the Classroom roster import
+      // uploads ~2.5MB saved pages; the default 1MB body limit
       // would reject them before the action runs. 5mb leaves multipart headroom.
-      bodySizeLimit: "5mb",
+      bodySizeLimit: "10mb",
     },
   },
 };

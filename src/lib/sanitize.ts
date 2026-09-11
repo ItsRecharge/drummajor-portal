@@ -8,6 +8,16 @@ const ALLOWED = new Set([
   "b", "strong", "i", "em", "u", "p", "br", "ul", "ol", "li", "a", "h3", "h4", "blockquote", "img",
 ]);
 
+// Escape text for safe interpolation into HTML (emails, generated bodies).
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function escapeAttr(value: string): string {
   return value
     .replace(/&/g, "&amp;")

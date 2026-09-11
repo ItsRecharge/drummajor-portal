@@ -21,7 +21,7 @@ export async function listChildren(parentId: string | null) {
 export async function getItem(id: string) {
   return prisma.libraryItem.findUnique({
     where: { id },
-    include: { uploadedBy: { select: { name: true } } },
+    include: { uploadedBy: { select: { name: true } }, piece: true },
   });
 }
 

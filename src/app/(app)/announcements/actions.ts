@@ -112,9 +112,38 @@ export async function approveAction(formData: FormData): Promise<void> {
 export async function deleteAnnouncementAction(formData: FormData): Promise<void> {
   const { user: actor } = await requireRole(...COMPOSE_ROLES);
   const id = String(formData.get("announcementId") ?? "");
+  // Server-side guard: only drafts are deletable. Anything queued or sent keeps
+  // its delivery history (open counts) and can't be removed through the UI.
+  const existing = await prisma.announcement.findUnique({ where: { id }, select: { status: true } });
+  if (!existing || existing.status !== AnnouncementStatus.DRAFT) {
+    revalidatePath("/announcements");
+    redirect("/announcements");
+  }
   await prisma.announcement.delete({ where: { id } });
   await logAudit({ actorId: actor.id, action: "ANNOUNCEMENT_DELETED", target: id });
   revalidatePath("/announcements");
+  redirect("/announcements");
+}
+
+// Pull a scheduled (or approval-pending) announcement back to Drafts. Its
+// not-yet-sent EmailDelivery rows are discarded; sending again re-creates them.
+export async function cancelScheduledAction(formData: FormData): Promise<void> {
+  const { user: actor } = await requireRole(...COMPOSE_ROLES);
+  const id = String(formData.get("announcementId") ?? "");
+  const existing = await prisma.announcement.findUnique({ where: { id }, select: { status: true } });
+  const cancellable: AnnouncementStatus[] = [AnnouncementStatus.SCHEDULED, AnnouncementStatus.PENDING_APPROVAL];
+  if (existing && cancellable.includes(existing.status)) {
+    await prisma.$transaction([
+      prisma.emailDelivery.deleteMany({ where: { announcementId: id, sentAt: null } }),
+      prisma.announcement.update({
+        where: { id },
+        data: { status: AnnouncementStatus.DRAFT, scheduledAt: null },
+      }),
+    ]);
+    await logAudit({ actorId: actor.id, action: "ANNOUNCEMENT_CANCELLED", target: id });
+  }
+  revalidatePath("/announcements");
+  revalidatePath(`/announcements/${id}`);
   redirect("/announcements");
 }
 
@@ -132,7 +161,45 @@ export async function saveTemplateAction(_prev: ActionState, formData: FormData)
   }
   await prisma.announcementTemplate.create({ data: parsed.data });
   revalidatePath("/announcements/new");
+  revalidatePath("/announcements/templates");
   return { success: true, message: "Template saved." };
+}
+
+export async function updateTemplateAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(...COMPOSE_ROLES);
+  const id = String(formData.get("templateId") ?? "");
+  const parsed = templateSchema.safeParse({
+    name: formData.get("templateName"),
+    subject: formData.get("subject"),
+    bodyHtml: sanitizeHtml(String(formData.get("bodyHtml") ?? "")),
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0] === "name" ? "templateName" : String(issue.path[0]);
+      if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+    }
+    return { fieldErrors, error: "Please fix the errors below." };
+  }
+  const existing = await prisma.announcementTemplate.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) return { error: "Template not found." };
+  await prisma.announcementTemplate.update({ where: { id }, data: parsed.data });
+  revalidatePath("/announcements/new");
+  revalidatePath("/announcements/templates");
+  redirect("/announcements/templates");
+}
+
+export async function deleteTemplateAction(formData: FormData): Promise<void> {
+  const { user: actor } = await requireRole(...COMPOSE_ROLES);
+  const id = String(formData.get("templateId") ?? "");
+  const existing = await prisma.announcementTemplate.findUnique({ where: { id }, select: { name: true } });
+  if (existing) {
+    await prisma.announcementTemplate.delete({ where: { id } });
+    await logAudit({ actorId: actor.id, action: "TEMPLATE_DELETED", target: existing.name });
+  }
+  revalidatePath("/announcements/new");
+  revalidatePath("/announcements/templates");
+  redirect("/announcements/templates");
 }
 
 const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);

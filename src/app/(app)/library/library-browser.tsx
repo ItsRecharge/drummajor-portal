@@ -21,18 +21,27 @@ function formatBytes(bytes: bigint | null): string {
   return `${v.toFixed(v < 10 ? 1 : 0)} ${units[i]}`;
 }
 
-export async function LibraryBrowser({ folderId }: { folderId: string | null }) {
+// `embedded`: rendered under the music catalog on the root page, so it shows a
+// section heading instead of the page title.
+export async function LibraryBrowser({ folderId, embedded = false }: { folderId: string | null; embedded?: boolean }) {
   await requireRole(Role.ADMIN, Role.DRUM_MAJOR, Role.LIBRARIAN);
   const [items, crumbs] = await Promise.all([listChildren(folderId), getBreadcrumbs(folderId)]);
 
   return (
     <div className="grid gap-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight uppercase">Library</h1>
-        <p className="text-sm text-muted-foreground">
-          Band files and music, organized like Drive. Items open in Google Drive.
-        </p>
-      </div>
+      {embedded ? (
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-sm font-semibold tracking-wide uppercase">Folders</h2>
+          <span className="text-xs text-muted-foreground">Everything in the Drive folder, as-is.</span>
+        </div>
+      ) : (
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight uppercase">Library</h1>
+          <p className="text-sm text-muted-foreground">
+            Band files and music, organized like Drive. Items open in Google Drive.
+          </p>
+        </div>
+      )}
 
       {/* Breadcrumb */}
       <nav className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
@@ -56,7 +65,7 @@ export async function LibraryBrowser({ folderId }: { folderId: string | null }) 
         })}
       </nav>
 
-      <LibraryToolbar parentId={folderId} />
+      <LibraryToolbar parentId={folderId} isRoot={folderId === null} />
 
       <Card className="divide-y divide-border p-0">
         {items.length === 0 ? (
@@ -121,7 +130,7 @@ export async function LibraryBrowser({ folderId }: { folderId: string | null }) 
                       <Loader2 className="size-3.5 animate-spin" /> Uploading…
                     </span>
                   ) : null}
-                  <ItemActions id={item.id} name={item.name} synced={synced} />
+                  <ItemActions id={item.id} name={item.name} synced={synced} errored={errored} />
                 </span>
               </div>
             );

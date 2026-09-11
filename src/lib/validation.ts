@@ -137,8 +137,10 @@ export const templateSchema = z.object({
 export const eventSchema = z.object({
   title: z.string().trim().min(1, "Required"),
   description: z.string().optional(),
+  location: z.string().trim().optional(),
   date: requiredDateTime,
   time: z.string().optional(),
+  audience: z.enum(["BAND", "DRUM_MAJORS"]).default("BAND"),
 });
 
 export const taskSchema = z.object({
@@ -166,3 +168,20 @@ export const handoffNoteSchema = z.object({
   bodyHtml: z.string().trim().min(1, "Write something"),
 });
 
+
+// Music catalog (src/lib/music-catalog.ts). Category / credit type values mirror
+// the MusicCategory / CreditType Prisma enums.
+export const musicPieceSchema = z.object({
+  title: z.string().trim().min(1, "Required"),
+  credit: z.string().trim().optional(),
+  creditType: z.enum(["ARRANGER", "COMPOSER"]).optional(),
+  category: z.enum([
+    "CONCERT_BAND",
+    "JAZZ_BAND",
+    "MARCHING_BAND",
+    "MISCELLANEOUS",
+    "MUSICAL",
+    "ORCHESTRA",
+    "SOLO_ENSEMBLE",
+  ]),
+});

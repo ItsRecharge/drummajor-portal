@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
-import { MoreVertical, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import { MoreVertical, Pencil, Trash2, ExternalLink, RotateCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -18,20 +19,49 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { renameItemAction, deleteItemAction } from "./actions";
+import { SubmitButton } from "@/components/submit-button";
+import { emptyState, type ActionState } from "@/lib/form";
+import { renameItemAction, deleteItemAction, retryItemAction } from "./actions";
 
 export function ItemActions({
   id,
   name,
   synced,
+  errored = false,
 }: {
   id: string;
   name: string;
   synced: boolean;
+  errored?: boolean;
 }) {
   const [renameOpen, setRenameOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  // Wrap the server action so the dialog closes (and toasts) from the submit
+  // flow itself rather than from an effect watching the result.
+  const [renameState, renameAction] = useActionState(
+    async (prev: ActionState, formData: FormData) => {
+      const result = await renameItemAction(prev, formData);
+      if (result.success) {
+        toast.success(result.message ?? "Renamed.");
+        setRenameOpen(false);
+      } else if (result.error) {
+        toast.error(result.error);
+      }
+      return result;
+    },
+    emptyState,
+  );
 
   return (
     <>
@@ -49,50 +79,60 @@ export function ItemActions({
               Open in Drive
             </DropdownMenuItem>
           ) : null}
+          {errored ? (
+            <form action={retryItemAction}>
+              <input type="hidden" name="id" value={id} />
+              <DropdownMenuItem render={<button type="submit" className="w-full" />}>
+                <RotateCw />
+                Retry upload
+              </DropdownMenuItem>
+            </form>
+          ) : null}
           <DropdownMenuItem onClick={() => setRenameOpen(true)}>
             <Pencil />
             Rename
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <form
-            action={deleteItemAction}
-            onSubmit={(e) => {
-              if (!confirm(`Delete "${name}"? This also removes it from Google Drive.`)) {
-                e.preventDefault();
-              }
-            }}
-          >
-            <input type="hidden" name="id" value={id} />
-            <DropdownMenuItem
-              variant="destructive"
-              render={<button type="submit" className="w-full" />}
-            >
-              <Trash2 />
-              Delete
-            </DropdownMenuItem>
-          </form>
+          <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+            <Trash2 />
+            Delete
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent className="sm:max-w-sm">
-          <form action={renameItemAction} onSubmit={() => setRenameOpen(false)}>
+          <form action={renameAction}>
             <DialogHeader>
               <DialogTitle>Rename</DialogTitle>
             </DialogHeader>
             <input type="hidden" name="id" value={id} />
-            <Input name="name" defaultValue={name} className="my-4" autoComplete="off" />
+            <Input name="name" defaultValue={name} className="my-4" autoComplete="off" aria-invalid={!!renameState.fieldErrors?.name} />
             <DialogFooter>
-              <DialogClose
-                render={<Button type="button" variant="outline" />}
-              >
-                Cancel
-              </DialogClose>
-              <Button type="submit">Save</Button>
+              <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
+              <SubmitButton pendingLabel="Saving…">Save</SubmitButton>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{name}”?</AlertDialogTitle>
+            <AlertDialogDescription>This also removes it from Google Drive. Folders take their contents with them.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <form action={deleteItemAction}>
+            <input type="hidden" name="id" value={id} />
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep it</AlertDialogCancel>
+              <SubmitButton variant="destructive" pendingLabel="Deleting…">
+                Delete
+              </SubmitButton>
+            </AlertDialogFooter>
+          </form>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -3,8 +3,9 @@ import { AnnouncementStatus } from "@/generated/prisma/client";
 import { getSmtpConfig, buildTransport, fromHeader, announcementEmail, appBaseUrl } from "@/lib/email";
 import { randomToken, isExpired } from "@/lib/tokens";
 import { resolveGroupMemberIds } from "@/lib/groups";
+import { getLeadershipEmails } from "@/lib/leadership";
 import { shareAnyoneWithLink, isDriveConfigured } from "@/lib/drive";
-import { absolutizeImageSrc } from "@/lib/sanitize";
+import { absolutizeImageSrc, escapeHtml } from "@/lib/sanitize";
 
 // How many recipients to send per scheduler tick. With a 1-minute tick this paces
 // delivery (a full ~150-person send finishes over a few minutes) and stays well
@@ -15,7 +16,8 @@ const SEND_SPACING_MS = 250;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Unique, lowercased recipient emails across the announcement's selected groups.
+// Unique, lowercased recipient emails: the announcement's selected groups plus
+// every drum major / admin.
 export async function resolveRecipients(announcementId: string): Promise<string[]> {
   const links = await prisma.announcementRecipientGroup.findMany({
     where: { announcementId },
@@ -25,12 +27,17 @@ export async function resolveRecipients(announcementId: string): Promise<string[
   for (const link of links) {
     for (const cid of await resolveGroupMemberIds(link.group)) ids.add(cid);
   }
-  if (ids.size === 0) return [];
-  const contacts = await prisma.contact.findMany({
-    where: { id: { in: [...ids] } },
-    select: { email: true },
-  });
-  return [...new Set(contacts.map((c) => c.email.toLowerCase()))];
+  // Every send also goes to the leadership team (drum majors + admins). A
+  // leader who is also on a roster is emailed once: the Set dedupes by email.
+  const emails = new Set(await getLeadershipEmails());
+  if (ids.size > 0) {
+    const contacts = await prisma.contact.findMany({
+      where: { id: { in: [...ids] } },
+      select: { email: true },
+    });
+    for (const c of contacts) emails.add(c.email.toLowerCase());
+  }
+  return [...emails];
 }
 
 // Materialize one EmailDelivery per unique recipient (idempotent — skips if the
@@ -102,7 +109,7 @@ async function buildMusicAttachments(announcementId: string): Promise<MusicAttac
     if (!libraryItem.driveId) continue;
     try {
       const url = libraryItem.webViewLink ?? (await shareAnyoneWithLink(libraryItem.driveId));
-      linkItems.push(`<li><a href="${url}">${libraryItem.name}</a></li>`);
+      linkItems.push(`<li><a href="${escapeHtml(url)}">${escapeHtml(libraryItem.name)}</a></li>`);
     } catch {
       // Skip an item we can't share rather than failing the whole send.
     }
@@ -155,6 +162,7 @@ export async function processQueue(): Promise<void> {
 
     const transport = buildTransport(cfg);
     const music = await buildMusicAttachments(ann.id);
+    const org = await prisma.organization.findFirst({ select: { bandName: true } });
 
     for (const d of pending) {
       try {
@@ -162,6 +170,7 @@ export async function processQueue(): Promise<void> {
           bodyHtml: absolutizeImageSrc(ann.bodyHtml, appBaseUrl()),
           pixelUrl: `${appBaseUrl()}/t/${d.trackingToken}.gif`,
           linksHtml: music.linksHtml,
+          bandName: org?.bandName,
         });
         await transport.sendMail({
           from: fromHeader(cfg),
