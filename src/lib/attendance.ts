@@ -1,6 +1,7 @@
 // Attendance is marked against roster contacts, one sheet per band event. This
 // module is pure (no Prisma import) so it runs under node:test; the status
 // strings mirror the AttendanceStatus Prisma enum.
+import { csvCell } from "./music-index-csv.ts";
 
 export const ATTENDANCE_STATUSES = ["PRESENT", "LATE", "EXCUSED", "ABSENT"] as const;
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
@@ -95,4 +96,46 @@ export function summarizeAttendance(
   }
   for (const row of rows.values()) row.rate = attendanceRate(row);
   return rows;
+}
+
+// RFC 4180, CRLF endings — same rules as index.csv.
+function csvText(header: string[], rows: (string | number)[][]): string {
+  return [header, ...rows].map((r) => r.map((v) => csvCell(String(v))).join(",")).join("\r\n") + "\r\n";
+}
+
+export type EventCsvRow = { name: string; email: string; instrument: string; status: AttendanceStatus };
+
+export function eventAttendanceCsv(rows: EventCsvRow[]): string {
+  return csvText(
+    ["Name", "Email", "Instrument", "Status"],
+    rows.map((r) => [r.name, r.email, r.instrument, ATTENDANCE_LABELS[r.status]]),
+  );
+}
+
+export type SummaryCsvRow = AttendanceSummaryRow & { name: string; email: string; instrument: string };
+
+export function attendanceSummaryCsv(rows: SummaryCsvRow[]): string {
+  return csvText(
+    ["Name", "Email", "Instrument", "Expected", "Present", "Late", "Excused", "Absent", "Rate"],
+    rows.map((r) => [
+      r.name,
+      r.email,
+      r.instrument,
+      r.expected,
+      r.present,
+      r.late,
+      r.excused,
+      r.absent,
+      r.rate === null ? "" : formatRate(r.rate),
+    ]),
+  );
+}
+
+// File-name-safe slug for CSV downloads.
+export function slugify(text: string): string {
+  const s = text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return s || "event";
 }

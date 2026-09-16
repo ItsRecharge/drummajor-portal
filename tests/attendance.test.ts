@@ -9,6 +9,9 @@ import {
   summarizeAttendance,
   attendanceRate,
   formatRate,
+  eventAttendanceCsv,
+  attendanceSummaryCsv,
+  slugify,
 } from "../src/lib/attendance.ts";
 
 test("statuses: four values in UI order with labels", () => {
@@ -72,4 +75,31 @@ test("attendanceRate and formatRate", () => {
   assert.equal(formatRate(null), "—");
   assert.equal(formatRate(0.916), "92%");
   assert.equal(formatRate(1), "100%");
+});
+
+test("eventAttendanceCsv: header + label column, quotes commas and doubles quotes", () => {
+  const csv = eventAttendanceCsv([
+    { name: 'Smith, "Jo"', email: "jo@wpsstudent.com", instrument: "Flute", status: "LATE" },
+    { name: "Ann Lee", email: "ann@wpsstudent.com", instrument: "", status: "ABSENT" },
+  ]);
+  assert.equal(
+    csv,
+    'Name,Email,Instrument,Status\r\n"Smith, ""Jo""",jo@wpsstudent.com,Flute,Late\r\nAnn Lee,ann@wpsstudent.com,,Absent\r\n',
+  );
+});
+
+test("attendanceSummaryCsv: counts and a percent (blank when null)", () => {
+  const csv = attendanceSummaryCsv([
+    { contactId: "a", name: "Ann", email: "a@x", instrument: "Tuba", expected: 4, present: 3, late: 0, excused: 1, absent: 0, rate: 1 },
+    { contactId: "b", name: "Bo", email: "b@x", instrument: "", expected: 0, present: 0, late: 0, excused: 0, absent: 0, rate: null },
+  ]);
+  assert.equal(
+    csv,
+    "Name,Email,Instrument,Expected,Present,Late,Excused,Absent,Rate\r\nAnn,a@x,Tuba,4,3,0,1,0,100%\r\nBo,b@x,,0,0,0,0,0,\r\n",
+  );
+});
+
+test("slugify: lowercase, dashes, no punctuation, trimmed", () => {
+  assert.equal(slugify("Fall Rehearsal #2 — Stadium!"), "fall-rehearsal-2-stadium");
+  assert.equal(slugify("   "), "event");
 });
