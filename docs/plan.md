@@ -403,6 +403,12 @@ Still to verify on the music-dept server:
 - Announcement send: drum majors + admins receive a copy exactly once; music links resolve.
 - Drum-major event email carries a calendar invite; task/idea emails arrive.
 
+Attendance (2026-09-16, `feat/attendance`, spec `docs/superpowers/specs/2026-09-16-event-attendance-design.md`):
+band events get a per-event roll-call sheet (`/events/[id]/attendance`, Present/Late/Excused/Absent
+against a chosen class list, CSV export) and a season summary at `/attendance` (per-student counts,
+rate = present+late over expected−excused, CSV). New table `AttendanceRecord`; `Event` gains
+`attendanceGroupId` / `attendanceTakenAt` (migration `7_attendance`).
+
 Dev notes:
 - Build locally with a throwaway Postgres URL so build workers never open PGlite:
   `DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build`.

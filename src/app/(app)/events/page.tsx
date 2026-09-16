@@ -33,7 +33,7 @@ export default async function EventsPage() {
         </CardContent>
       </Card>
 
-      <EventList events={events} emailedLabel="Emailed" />
+      <EventList events={events} emailedLabel="Emailed" showAttendance />
     </div>
   );
 }

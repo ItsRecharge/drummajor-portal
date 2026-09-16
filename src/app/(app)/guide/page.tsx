@@ -13,6 +13,7 @@ const TOC = [
   ["#clear", "Clearing last year's roster"],
   ["#people", "Adding and removing drum majors"],
   ["#announce", "Sending announcements"],
+  ["#attendance", "Taking attendance"],
   ["#music", "Adding music"],
   ["#handoff", "Handoff notes"],
 ] as const;
@@ -193,7 +194,31 @@ export default async function GuidePage() {
         </ul>
       </Section>
 
-      <Section id="music" title="6. Adding music">
+      <Section id="attendance" title="6. Taking attendance">
+        <ol>
+          <li>
+            Create the rehearsal or performance under <em>Band Events</em> (it only needs a title and
+            date), then click <strong>Attendance</strong> on its row.
+          </li>
+          <li>
+            Pick the class list at the top (Jazz Band, Concert/Marching Band, or Everyone). Everyone
+            starts as <strong>Absent</strong> — tap <strong>Present</strong>, <strong>Late</strong> or{" "}
+            <strong>Excused</strong> as you call names, or use <em>Mark all present</em> and fix the
+            exceptions. The search box jumps to a name.
+          </li>
+          <li>
+            <strong>Save attendance</strong>. You can come back and change it any time; the event row
+            shows a <em>Taken</em> badge.
+          </li>
+          <li>
+            <em>Attendance</em> in the sidebar shows season totals per student (present, late,
+            excused, absent, and a rate that ignores excused absences). Both screens have a{" "}
+            <strong>CSV</strong> button for the director.
+          </li>
+        </ol>
+      </Section>
+
+      <Section id="music" title="7. Adding music">
         <ul>
           <li>
             <em>Library</em> → <strong>Add music</strong>. Pick the category (Concert Band, Jazz Band,
@@ -215,7 +240,7 @@ export default async function GuidePage() {
         </ul>
       </Section>
 
-      <Section id="handoff" title="7. Handoff notes">
+      <Section id="handoff" title="8. Handoff notes">
         <p>
           User menu → <em>Handoff</em>. Write what worked, what didn&apos;t, and tips for the next
           class. Do it during the year, not the week before graduation.
