@@ -9,6 +9,7 @@ import {
   FolderOpen,
   CalendarDays,
   CalendarCheck,
+  ClipboardCheck,
   ListChecks,
   Lightbulb,
   Flag,
@@ -50,6 +51,7 @@ export function AppSidebar({
       items: [
         { href: "/announcements", label: "Email Announcements", icon: Megaphone, show: canInvite },
         { href: "/events", label: "Band Events", icon: CalendarDays, show: canInvite },
+        { href: "/attendance", label: "Attendance", icon: ClipboardCheck, show: canInvite },
       ],
     },
     {
