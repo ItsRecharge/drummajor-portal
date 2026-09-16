@@ -151,6 +151,7 @@ model Contact {
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   groups     ContactGroup[]
+  attendance AttendanceRecord[]
 }
 
 model Group {
@@ -161,6 +162,7 @@ model Group {
   createdAt DateTime       @default(now())
   contacts  ContactGroup[]
   announcementLinks AnnouncementRecipientGroup[]
+  attendanceEvents  Event[]
 }
 
 model ContactGroup {
@@ -363,10 +365,36 @@ model Event {
   notify      Boolean       @default(false)
   createdById String?
   createdBy   User?         @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  // Attendance: which class list was expected and when the sheet was last saved.
+  attendanceGroupId String?
+  attendanceGroup   Group?     @relation(fields: [attendanceGroupId], references: [id], onDelete: SetNull)
+  attendanceTakenAt DateTime?
+  attendance        AttendanceRecord[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@index([audience, date])
+}
+
+// One row per expected student per band event. "Expected" = had a row when the
+// sheet was saved, so summaries divide by rows, not by current group size.
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+model AttendanceRecord {
+  eventId   String
+  event     Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  status    AttendanceStatus
+  updatedAt DateTime         @updatedAt
+
+  @@id([eventId, contactId])
+  @@index([contactId])
 }
 
 enum TaskStatus {
