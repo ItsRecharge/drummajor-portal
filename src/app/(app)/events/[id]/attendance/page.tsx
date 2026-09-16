@@ -75,9 +75,10 @@ export default async function EventAttendancePage({
           </div>
         </CardHeader>
         <CardContent>
-          {/* Key resets client state when the group changes or a save lands. */}
+          {/* Key resets client state when the group changes. Not on save: the
+              sheet must survive its own action so the toast can fire. */}
           <AttendanceSheet
-            key={`${group.id}:${event.attendanceTakenAt?.getTime() ?? 0}`}
+            key={group.id}
             eventId={event.id}
             groupId={group.id}
             rows={rows}
