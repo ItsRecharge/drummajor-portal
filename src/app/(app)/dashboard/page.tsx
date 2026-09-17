@@ -93,6 +93,10 @@ export default async function DashboardPage() {
               Welcome, {user.name}
             </h1>
           </div>
+          <Link href="/calendar" target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <CalendarDays data-icon="inline-start" />
+            Public calendar
+          </Link>
           <Link href="/guide" className={buttonVariants({ variant: "outline", size: "sm" })}>
             <BookOpen data-icon="inline-start" />
             Quick start guide

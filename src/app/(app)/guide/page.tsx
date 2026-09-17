@@ -13,6 +13,7 @@ const TOC = [
   ["#clear", "Clearing last year's roster"],
   ["#people", "Adding and removing drum majors"],
   ["#announce", "Sending announcements"],
+  ["#events", "Events, reminders and the public calendar"],
   ["#attendance", "Taking attendance"],
   ["#music", "Adding music"],
   ["#handoff", "Handoff notes"],
@@ -194,7 +195,32 @@ export default async function GuidePage() {
         </ul>
       </Section>
 
-      <Section id="attendance" title="6. Taking attendance">
+      <Section id="events" title="6. Events, reminders and the public calendar">
+        <ol>
+          <li>
+            Add every rehearsal, performance and competition under <em>Band Events</em> and pick{" "}
+            <strong>who&apos;s expected</strong> (Jazz Band, Concert/Marching Band, or Everyone). It goes straight
+            onto the public calendar at <code>/calendar</code>, which anyone can open or subscribe to.
+          </li>
+          <li>
+            Nobody is emailed when you add an event <strong>unless it is within a week</strong>. Then the portal
+            takes over: a reminder a week out, three days out, and the morning of, each with the conflict rule.
+            On the 1st of the month (9 AM) everyone gets an overview if anything is more than a week away.
+          </li>
+          <li>
+            The conflict rule in every email: <em>attendance is mandatory and may impact your grade; if you
+            cannot make it, email the conflict contact and CC the drum major; unless it is a genuine emergency,
+            conflicts must be cleared 3 days ahead or a cut is recorded.</em> Set those two people (and their
+            addresses) in <em>Settings → Attendance policy</em> each year.
+          </li>
+          <li>
+            The emails show up under <em>Email Announcements → Sent</em> like any other message, so you can see
+            exactly what went out and who opened it.
+          </li>
+        </ol>
+      </Section>
+
+      <Section id="attendance" title="7. Taking attendance">
         <ol>
           <li>
             Create the rehearsal or performance under <em>Band Events</em> (it only needs a title and
@@ -218,7 +244,7 @@ export default async function GuidePage() {
         </ol>
       </Section>
 
-      <Section id="music" title="7. Adding music">
+      <Section id="music" title="8. Adding music">
         <ul>
           <li>
             <em>Library</em> → <strong>Add music</strong>. Pick the category (Concert Band, Jazz Band,
@@ -240,7 +266,7 @@ export default async function GuidePage() {
         </ul>
       </Section>
 
-      <Section id="handoff" title="8. Handoff notes">
+      <Section id="handoff" title="9. Handoff notes">
         <p>
           User menu → <em>Handoff</em>. Write what worked, what didn&apos;t, and tips for the next
           class. Do it during the year, not the week before graduation.
