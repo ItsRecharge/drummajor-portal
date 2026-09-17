@@ -43,6 +43,12 @@ model AppSettings {
   driveIndexFileId String?
   approvalRequired Boolean  @default(false)
   setupComplete    Boolean  @default(false)
+  // Who students must email about an event conflict (shown in every event
+  // email). Names are seeded; addresses are entered in Settings.
+  absenceContactName  String?
+  absenceContactEmail String?
+  absenceCcName       String?
+  absenceCcEmail      String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
@@ -365,11 +371,13 @@ model Event {
   notify      Boolean       @default(false)
   createdById String?
   createdBy   User?         @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  // Attendance: which class list was expected and when the sheet was last saved.
+  // Who's expected: the class list chosen at creation; drives event emails and
+  // pre-selects the attendance sheet. Null = Everyone.
   attendanceGroupId String?
   attendanceGroup   Group?     @relation(fields: [attendanceGroupId], references: [id], onDelete: SetNull)
   attendanceTakenAt DateTime?
   attendance        AttendanceRecord[]
+  notices           EventNotice[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -395,6 +403,38 @@ model AttendanceRecord {
 
   @@id([eventId, contactId])
   @@index([contactId])
+}
+
+// ---------------------------------------------------------------------------
+// Event emails: which sends an event has had (or been covered for), and which
+// monthly overviews have gone out. See src/lib/event-schedule.ts for the rules.
+// ---------------------------------------------------------------------------
+
+enum EventNoticeKind {
+  ANNOUNCED
+  WEEK_BEFORE
+  THREE_DAYS_BEFORE
+  DAY_OF
+}
+
+model EventNotice {
+  id             String          @id @default(cuid())
+  eventId        String
+  event          Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  kind           EventNoticeKind
+  // The queued Announcement that carried it; null when an earlier send covered it.
+  announcementId String?
+  sentAt         DateTime        @default(now())
+
+  @@unique([eventId, kind])
+}
+
+model DigestLog {
+  id             String   @id @default(cuid())
+  // "YYYY-MM" in the band's timezone.
+  period         String   @unique
+  announcementId String?
+  sentAt         DateTime @default(now())
 }
 
 enum TaskStatus {
