@@ -92,6 +92,7 @@ model User {
   impersonatedBy    SecurityLog[]       @relation("TargetSecurity")
   emailVerifTokens  EmailVerification[]
   passwordResets    PasswordReset[]
+  appealDecisions   AbsenceAppeal[]     @relation("AppealDecider")
 }
 
 // Server-side session records (Auth.js DB sessions / log-out-other-devices).
@@ -400,9 +401,38 @@ model AttendanceRecord {
   contact   Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
   status    AttendanceStatus
   updatedAt DateTime         @updatedAt
+  // Absent students are emailed once (a grace period after the sheet is saved)
+  // with a personal appeal link.
+  absenceEmailedAt DateTime?
+  appealToken      String?        @unique
+  appeal           AbsenceAppeal?
 
   @@id([eventId, contactId])
   @@index([contactId])
+}
+
+// A student's request to have an absence re-recorded as Excused. Leadership
+// approves (record → EXCUSED) or denies; either way the student is emailed.
+enum AppealStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+model AbsenceAppeal {
+  id          String           @id @default(cuid())
+  eventId     String
+  contactId   String
+  record      AttendanceRecord @relation(fields: [eventId, contactId], references: [eventId, contactId], onDelete: Cascade)
+  reason      String
+  status      AppealStatus     @default(PENDING)
+  submittedAt DateTime         @default(now())
+  decidedAt   DateTime?
+  decidedById String?
+  decidedBy   User?            @relation("AppealDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, contactId])
+  @@index([status])
 }
 
 // ---------------------------------------------------------------------------
