@@ -5,6 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { ProfileForm, PasswordForm, EmailForm, LogoutOthers } from "./settings-forms";
 import { DriveSettings } from "./drive-forms";
 import { SmtpSettings } from "./smtp-forms";
+import { AttendancePolicySettings } from "./attendance-policy-forms";
+import { getAppSettings } from "@/lib/settings";
+import { DEFAULT_CC_NAME, DEFAULT_CONTACT_NAME } from "@/lib/event-emails";
 import { getSmtpConfig } from "@/lib/email";
 import { isAdmin } from "@/lib/roles";
 import { getDriveItem, getRootFolderId, getServiceAccountEmail, isDriveConfigured } from "@/lib/drive";
@@ -19,6 +22,7 @@ export default async function SettingsPage() {
   // failures are shown inline rather than breaking the page.
   const admin = isAdmin(user.role);
   const smtp = admin ? await getSmtpConfig() : null;
+  const policy = admin ? await getAppSettings() : null;
   let drive: { configured: boolean; saEmail: string | null; rootId: string | null; rootName: string | null; rootError: string | null } | null = null;
   if (admin) {
     const [configured, saEmail, rootId] = await Promise.all([isDriveConfigured(), getServiceAccountEmail(), getRootFolderId()]);
@@ -88,6 +92,25 @@ export default async function SettingsPage() {
               user={smtp?.user ?? ""}
               fromName={smtp?.fromName ?? ""}
               myEmail={user.email}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {admin ? (
+        <Card className="border-t-2 border-t-primary">
+          <CardHeader>
+            <CardTitle>Attendance policy</CardTitle>
+            <CardDescription>
+              Who students email about a conflict. Quoted in every event reminder and absence notice.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AttendancePolicySettings
+              contactName={policy?.absenceContactName ?? DEFAULT_CONTACT_NAME}
+              contactEmail={policy?.absenceContactEmail ?? ""}
+              ccName={policy?.absenceCcName ?? DEFAULT_CC_NAME}
+              ccEmail={policy?.absenceCcEmail ?? ""}
             />
           </CardContent>
         </Card>

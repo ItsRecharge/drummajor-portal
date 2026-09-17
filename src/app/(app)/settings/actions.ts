@@ -22,7 +22,7 @@ import { randomToken, expiresInHours } from "@/lib/tokens";
 import { verificationEmail, sendMail, sendTestEmail, getSmtpConfig, type SmtpConfig } from "@/lib/email";
 import { parseForm, type ActionState } from "@/lib/form";
 import { z } from "zod";
-import { profileSchema, changePasswordSchema, changeEmailSchema, smtpSchema } from "@/lib/validation";
+import { profileSchema, changePasswordSchema, changeEmailSchema, smtpSchema, attendancePolicySchema } from "@/lib/validation";
 
 export async function updateProfileAction(
   _prev: ActionState,
@@ -237,4 +237,32 @@ export async function testSmtpSettingsAction(_prev: ActionState, _formData: Form
   } catch (err) {
     return { error: `Gmail rejected the send: ${err instanceof Error ? err.message : String(err)}` };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Attendance policy (admin only): who students email about a conflict.
+// ---------------------------------------------------------------------------
+
+export async function saveAttendancePolicyAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user } = await requireRole(...ADMIN_ONLY);
+  const parsed = parseForm(attendancePolicySchema, formData);
+  if (!parsed.ok) return parsed.state;
+
+  const id = await ensureAppSettings();
+  await prisma.appSettings.update({
+    where: { id },
+    data: {
+      absenceContactName: parsed.data.absenceContactName,
+      absenceContactEmail: parsed.data.absenceContactEmail ?? null,
+      absenceCcName: parsed.data.absenceCcName,
+      absenceCcEmail: parsed.data.absenceCcEmail ?? null,
+    },
+  });
+  await logAudit({
+    actorId: user.id,
+    action: "ATTENDANCE_POLICY_UPDATED",
+    target: `${parsed.data.absenceContactName} / cc ${parsed.data.absenceCcName}`,
+  });
+  revalidatePath("/settings");
+  return { success: true, message: "Conflict contacts saved." };
 }
