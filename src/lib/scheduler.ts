@@ -3,11 +3,12 @@ import { processQueue } from "@/lib/announce";
 import { processPendingItems, syncDriveTree } from "@/lib/library-sync";
 import { getRootFolderId, isDriveConfigured } from "@/lib/drive";
 import { runDailyEventJobs } from "@/lib/event-comms";
+import { processAbsenceEmails } from "@/lib/absence";
 import { DEFAULT_TZ } from "@/lib/event-schedule";
 
 // In-process scheduler. Under `next start` (single self-hosted instance — the
-// deployment model) this polls the DB-backed announcement queue every minute
-// and pushes staged library uploads; every 15 minutes it mirrors the Drive
+// deployment model) this polls the DB-backed announcement queue every minute,
+// pushes staged library uploads and emails newly recorded absences; every 15 minutes it mirrors the Drive
 // folder back into the DB so edits made in Drive by hand still show up.
 // State lives in Postgres, so a restart mid-send simply resumes on the next tick.
 let started = false;
@@ -20,6 +21,7 @@ export function startScheduler(): void {
     processPendingItems().catch((err) =>
       console.error("[scheduler] library sync failed:", err),
     );
+    processAbsenceEmails().catch((err) => console.error("[scheduler] absence emails failed:", err));
   });
   cron.schedule("*/15 * * * *", async () => {
     try {

@@ -158,6 +158,12 @@ export const attendancePolicySchema = z.object({
   absenceCcEmail: optionalEmail,
 });
 
+// Public absence appeal (the student's personal link + a short reason).
+export const appealSchema = z.object({
+  token: z.string().min(1),
+  reason: z.string().trim().min(10, "Tell us a little more (at least 10 characters)").max(2000, "Keep it under 2000 characters"),
+});
+
 export const taskSchema = z.object({
   title: z.string().trim().min(1, "Required"),
   assigneeId: z.string().optional(),

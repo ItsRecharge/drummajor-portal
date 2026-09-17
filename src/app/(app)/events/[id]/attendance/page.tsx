@@ -62,7 +62,9 @@ export default async function EventAttendancePage({
             <CardDescription>
               {event.attendanceTakenAt
                 ? `Last saved ${event.attendanceTakenAt.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.`
-                : "Not taken yet. Everyone starts as absent."}
+                : "Not taken yet. Everyone starts as absent."}{" "}
+              Absent students are emailed automatically 30 minutes after the sheet is saved (re-saving restarts the
+              clock) with a link to appeal.
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">
