@@ -2,6 +2,8 @@ import cron from "node-cron";
 import { processQueue } from "@/lib/announce";
 import { processPendingItems, syncDriveTree } from "@/lib/library-sync";
 import { getRootFolderId, isDriveConfigured } from "@/lib/drive";
+import { runDailyEventJobs } from "@/lib/event-comms";
+import { DEFAULT_TZ } from "@/lib/event-schedule";
 
 // In-process scheduler. Under `next start` (single self-hosted instance — the
 // deployment model) this polls the DB-backed announcement queue every minute
@@ -27,5 +29,14 @@ export function startScheduler(): void {
       console.error("[scheduler] Drive tree sync failed:", err);
     }
   });
-  console.log("[scheduler] announcement queue + library sync workers started");
+  // 9 AM band time: event reminders (7 days / 3 days / day-of) and, once a
+  // month, the upcoming-events overview. Idempotent, so a missed day catches up.
+  cron.schedule(
+    "0 9 * * *",
+    () => {
+      runDailyEventJobs().catch((err) => console.error("[scheduler] daily event jobs failed:", err));
+    },
+    { timezone: DEFAULT_TZ },
+  );
+  console.log("[scheduler] announcement queue + library sync + daily event email workers started");
 }

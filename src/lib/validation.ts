@@ -141,6 +141,21 @@ export const eventSchema = z.object({
   date: requiredDateTime,
   time: z.string().optional(),
   audience: z.enum(["BAND", "DRUM_MAJORS"]).default("BAND"),
+  // Band events: which built-in class list is expected (blank = Everyone).
+  groupId: z.string().optional(),
+});
+
+// Settings → Attendance policy: who students email about a conflict.
+const optionalEmail = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  z.email("Enter a valid email").optional(),
+);
+
+export const attendancePolicySchema = z.object({
+  absenceContactName: z.string().trim().min(1, "Required"),
+  absenceContactEmail: optionalEmail,
+  absenceCcName: z.string().trim().min(1, "Required"),
+  absenceCcEmail: optionalEmail,
 });
 
 export const taskSchema = z.object({

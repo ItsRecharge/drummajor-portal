@@ -29,8 +29,12 @@ export function shell(inner: string, bandName?: string): string {
 </div>`;
 }
 
+export function headingHtml(heading: string): string {
+  return `<h2 style="margin:0 0 14px;font-size:20px;color:${BRAND.ink}">${heading}</h2>`;
+}
+
 export function layout(heading: string, body: string, bandName?: string): string {
-  return shell(`<h2 style="margin:0 0 14px;font-size:20px;color:${BRAND.ink}">${heading}</h2>${body}`, bandName);
+  return shell(`${headingHtml(heading)}${body}`, bandName);
 }
 
 export function button(href: string, label: string): string {

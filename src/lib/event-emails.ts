@@ -1,6 +1,6 @@
 // Email templates for band events: created-within-a-week, the three reminders,
 // and the monthly overview. Pure (built on email-layout) so they're testable.
-import { button, escapeText, layout, meta, note } from "./email-layout.ts";
+import { button, escapeText, headingHtml, meta, note, shell } from "./email-layout.ts";
 import type { ReminderKind } from "./event-schedule.ts";
 
 // Who a student must email about a conflict. Names always render; the mailto
@@ -11,6 +11,19 @@ export type ConflictPolicy = {
   ccName: string;
   ccEmail?: string | null;
 };
+
+export const DEFAULT_CONTACT_NAME = "Mr. Costello";
+export const DEFAULT_CC_NAME = "Jake Killian";
+
+// `body` is the inner HTML (heading + content) for the announcement queue,
+// which adds the shell and tracking pixel at send time; `html` is the fully
+// wrapped message for direct sends.
+export type EventMail = { subject: string; body: string; html: string };
+
+function compose(subject: string, heading: string, content: string, bandName?: string): EventMail {
+  const body = `${headingHtml(heading)}${content}`;
+  return { subject, body, html: shell(body, bandName) };
+}
 
 export type EventEmailInput = {
   title: string;
@@ -60,15 +73,13 @@ function calendarButton(url: string): string {
   return button(url, "See the full calendar");
 }
 
-export function eventCreatedEmail(input: EventEmailInput): { subject: string; html: string } {
-  return {
-    subject: `New band event: ${input.title} — ${input.when}`,
-    html: layout(
-      "New band event",
-      `<p>A band event has been added for this week.</p>${details(input)}${conflictPolicyHtml(input.policy, input.title)}${calendarButton(input.calendarUrl)}`,
-      input.bandName,
-    ),
-  };
+export function eventCreatedEmail(input: EventEmailInput): EventMail {
+  return compose(
+    `New band event: ${input.title} — ${input.when}`,
+    "New band event",
+    `<p>A band event has been added for this week.</p>${details(input)}${conflictPolicyHtml(input.policy, input.title)}${calendarButton(input.calendarUrl)}`,
+    input.bandName,
+  );
 }
 
 const REMINDER_COPY: Record<ReminderKind, { prefix: string; heading: string; lead: string }> = {
@@ -89,16 +100,14 @@ const REMINDER_COPY: Record<ReminderKind, { prefix: string; heading: string; lea
   },
 };
 
-export function eventReminderEmail(kind: ReminderKind, input: EventEmailInput): { subject: string; html: string } {
+export function eventReminderEmail(kind: ReminderKind, input: EventEmailInput): EventMail {
   const copy = REMINDER_COPY[kind];
-  return {
-    subject: `${copy.prefix}: ${input.title} — ${input.when}`,
-    html: layout(
-      copy.heading,
-      `<p>${copy.lead}</p>${details(input)}${conflictPolicyHtml(input.policy, input.title)}${calendarButton(input.calendarUrl)}`,
-      input.bandName,
-    ),
-  };
+  return compose(
+    `${copy.prefix}: ${input.title} — ${input.when}`,
+    copy.heading,
+    `<p>${copy.lead}</p>${details(input)}${conflictPolicyHtml(input.policy, input.title)}${calendarButton(input.calendarUrl)}`,
+    input.bandName,
+  );
 }
 
 export type DigestEvent = { title: string; when: string; location?: string | null };
@@ -109,7 +118,7 @@ export function monthlyDigestEmail(opts: {
   calendarUrl: string;
   policy: ConflictPolicy;
   bandName?: string;
-}): { subject: string; html: string } {
+}): EventMail {
   const items = opts.events
     .map(
       (e) =>
@@ -117,12 +126,10 @@ export function monthlyDigestEmail(opts: {
     )
     .join("");
   const band = opts.bandName ? ` — ${opts.bandName}` : "";
-  return {
-    subject: `${opts.monthLabel} band events${band}`,
-    html: layout(
-      `${escapeText(opts.monthLabel)} at a glance`,
-      `<p>Here is everything on the band calendar this month. Each event also gets a reminder a week out, three days out, and the morning of.</p><ul style="padding-left:20px;margin:12px 0">${items}</ul>${conflictPolicyHtml(opts.policy, `${opts.monthLabel} events`)}${calendarButton(opts.calendarUrl)}`,
-      opts.bandName,
-    ),
-  };
+  return compose(
+    `${opts.monthLabel} band events${band}`,
+    `${escapeText(opts.monthLabel)} at a glance`,
+    `<p>Here is everything on the band calendar this month. Each event also gets a reminder a week out, three days out, and the morning of.</p><ul style="padding-left:20px;margin:12px 0">${items}</ul>${conflictPolicyHtml(opts.policy, `${opts.monthLabel} events`)}${calendarButton(opts.calendarUrl)}`,
+    opts.bandName,
+  );
 }
