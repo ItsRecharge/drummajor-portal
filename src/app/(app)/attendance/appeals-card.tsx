@@ -26,9 +26,9 @@ function useToast(state: ActionState) {
   }, [state]);
 }
 
-function PendingAppeal({ appeal }: { appeal: AppealRow }) {
-  const [state, action] = useActionState(decideAppealAction, emptyState);
-  useToast(state);
+// The action state lives on the card, not the row: a decided row leaves the
+// pending list on revalidate, and an unmounted row can't show its toast.
+function PendingAppeal({ appeal, action }: { appeal: AppealRow; action: (formData: FormData) => void }) {
   return (
     <li className="grid gap-2 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -59,6 +59,8 @@ function PendingAppeal({ appeal }: { appeal: AppealRow }) {
 }
 
 export function AppealsCard({ pending, decided }: { pending: AppealRow[]; decided: AppealRow[] }) {
+  const [state, action] = useActionState(decideAppealAction, emptyState);
+  useToast(state);
   return (
     <div className="grid gap-4">
       {pending.length === 0 ? (
@@ -66,7 +68,7 @@ export function AppealsCard({ pending, decided }: { pending: AppealRow[]; decide
       ) : (
         <ul className="divide-y">
           {pending.map((a) => (
-            <PendingAppeal key={a.id} appeal={a} />
+            <PendingAppeal key={a.id} appeal={a} action={action} />
           ))}
         </ul>
       )}
