@@ -1,7 +1,9 @@
 /**
- * Minimal RFC 5545 iCalendar builder for a single event.
+ * Minimal RFC 5545 iCalendar builder.
  *
- * Intended for nodemailer's `icalEvent: { method: "REQUEST", content }`.
+ * `buildIcs` makes a single-event invite for nodemailer's
+ * `icalEvent: { method: "REQUEST", content }`; `buildCalendarFeed` makes a
+ * subscribable PUBLISH calendar of many events for the public calendar page.
  * Dates/times are emitted as FLOATING local time (no `Z`, no TZID) so every
  * calendar app shows the wall-clock time the organizer typed.
  */
@@ -103,8 +105,10 @@ function hasValue(value: string | null | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-export function buildIcs(ev: IcsEvent): string {
-  const now = ev.now ?? new Date();
+const CALENDAR_HEAD = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Drum Major Portal//EN", "CALSCALE:GREGORIAN"];
+
+/** The VEVENT block (BEGIN..END) for one event. */
+function vevent(ev: IcsEvent, now: Date): string[] {
   const y = ev.date.getFullYear();
   const mo = ev.date.getMonth();
   const d = ev.date.getDate();
@@ -133,11 +137,6 @@ export function buildIcs(ev: IcsEvent): string {
   }
 
   const lines: string[] = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Drum Major Portal//EN",
-    "CALSCALE:GREGORIAN",
-    "METHOD:REQUEST",
     "BEGIN:VEVENT",
     `UID:${stripControl(ev.uid)}`,
     `DTSTAMP:${fmtDateTimeUtc(now)}Z`,
@@ -151,7 +150,28 @@ export function buildIcs(ev: IcsEvent): string {
   if (hasValue(ev.url)) lines.push(`URL:${stripControl(ev.url)}`);
   if (hasValue(ev.organizerEmail)) lines.push(`ORGANIZER:mailto:${stripControl(ev.organizerEmail)}`);
 
-  lines.push("STATUS:CONFIRMED", "END:VEVENT", "END:VCALENDAR");
+  lines.push("STATUS:CONFIRMED", "END:VEVENT");
+  return lines;
+}
 
+function serialize(lines: string[]): string {
   return lines.flatMap(fold).join(CRLF) + CRLF;
+}
+
+/** One-event invite (METHOD:REQUEST) for an email attachment. */
+export function buildIcs(ev: IcsEvent): string {
+  const now = ev.now ?? new Date();
+  return serialize([...CALENDAR_HEAD, "METHOD:REQUEST", ...vevent(ev, now), "END:VCALENDAR"]);
+}
+
+/** Subscribable calendar (METHOD:PUBLISH) holding every event. */
+export function buildCalendarFeed(events: IcsEvent[], opts: { name: string; now?: Date }): string {
+  const now = opts.now ?? new Date();
+  return serialize([
+    ...CALENDAR_HEAD,
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${escapeText(opts.name.trim())}`,
+    ...events.flatMap((ev) => vevent(ev, ev.now ?? now)),
+    "END:VCALENDAR",
+  ]);
 }
