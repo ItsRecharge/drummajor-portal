@@ -28,6 +28,8 @@ function summarize(type: string, payload: unknown): string {
       return `${p.author ?? "Someone"} posted an idea: ${p.preview ?? ""}`;
     case "DM_EVENT":
       return `Drum major event: ${p.title ?? ""}${p.when ? ` (${p.when})` : ""}`;
+    case "APPEAL":
+      return `${p.student ?? "A student"} appealed an absence: ${p.title ?? ""}${p.when ? ` (${p.when})` : ""}`;
     default:
       return type;
   }

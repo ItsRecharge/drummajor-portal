@@ -241,6 +241,13 @@ export default async function GuidePage() {
             excused, absent, and a rate that ignores excused absences). Both screens have a{" "}
             <strong>CSV</strong> button for the director.
           </li>
+          <li>
+            Thirty minutes after you save, every student still marked <strong>Absent</strong> is emailed
+            automatically: attendance is mandatory and may affect their grade, and they get a personal link to{" "}
+            <strong>appeal</strong> if the absence was excused or recorded wrong. Appeals land at the top of the{" "}
+            <em>Attendance</em> page — <em>Excuse it</em> flips the record to Excused, <em>Deny</em> leaves it; the
+            student is emailed either way. Fixing a status on the sheet yourself also settles a pending appeal.
+          </li>
         </ol>
       </Section>
 

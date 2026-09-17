@@ -7,6 +7,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { GroupPicker } from "@/components/group-picker";
+import { prisma } from "@/lib/prisma";
+import { AppealStatus } from "@/generated/prisma/client";
+import { formatEventWhen } from "../events/event-dates";
+import { AppealsCard, type AppealRow } from "./appeals-card";
 
 export const metadata = { title: "Attendance — Drum Major Portal" };
 
@@ -19,7 +23,26 @@ export default async function AttendancePage({
   const { group: requestedGroupId } = await searchParams;
   const groups = await getAttendanceGroups();
   const group = pickAttendanceGroup(groups, requestedGroupId, null);
-  const { rows, eventsTaken } = await getAttendanceSummary(group);
+  const [{ rows, eventsTaken }, appealsRaw] = await Promise.all([
+    getAttendanceSummary(group),
+    prisma.absenceAppeal.findMany({
+      include: { record: { include: { contact: true, event: true } }, decidedBy: { select: { name: true } } },
+      orderBy: { submittedAt: "desc" },
+      take: 100,
+    }),
+  ]);
+  const appeals: AppealRow[] = appealsRaw.map((a) => ({
+    id: a.id,
+    student: a.record.contact.name,
+    event: a.record.event.title,
+    when: formatEventWhen(a.record.event.date, a.record.event.time),
+    reason: a.reason,
+    submittedAt: a.submittedAt.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
+    status: a.status,
+    decidedBy: a.decidedBy?.name ?? null,
+  }));
+  const pending = appeals.filter((a) => a.status === AppealStatus.PENDING);
+  const decided = appeals.filter((a) => a.status !== AppealStatus.PENDING);
 
   return (
     <div className="grid gap-6">
@@ -29,6 +52,19 @@ export default async function AttendancePage({
           Season totals per student. Take attendance from each band event&apos;s page.
         </p>
       </div>
+
+      <Card className={pending.length ? "border-t-2 border-t-primary" : undefined}>
+        <CardHeader>
+          <CardTitle>Appeals</CardTitle>
+          <CardDescription>
+            Students marked absent get an email with a personal appeal link. Excusing one changes their record to
+            Excused; either way they&apos;re emailed the decision.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AppealsCard pending={pending} decided={decided} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
