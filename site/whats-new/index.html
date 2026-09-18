@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What's new — Fall 2026 · Drum Major Portal</title>
+<meta name="description" content="Fall 2026 update for the Winchester drum majors: a public band calendar, event reminders that send themselves, attendance sheets, and absence appeals.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%9F%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+<style>
+/* page-specific: two-up feature rows, rule list, email proofs */
+.feature{display:grid;grid-template-columns:1fr 1fr;gap:2.4rem;align-items:start;padding:3.2rem 0;border-top:1px solid var(--card-edge)}
+.feature:first-of-type{border-top:none;padding-top:1rem}
+.feature.flip .feature-media{order:-1}
+.feature-media{border:1px solid var(--card-edge);border-radius:8px;overflow:hidden;background:var(--card);box-shadow:0 18px 60px rgba(0,0,0,.45);min-width:0}
+.feature-media img{width:100%;aspect-ratio:1440/900;object-fit:cover;object-position:top;cursor:zoom-in}
+.feature-media.tall img{aspect-ratio:auto}
+.feature-copy h2{font-size:clamp(1.6rem,3vw,2.2rem);font-weight:600;margin:.4rem 0 .7rem}
+.feature-copy p{color:var(--chalk-dim);margin-bottom:.8rem}
+.feature-copy p strong,.rules li strong{color:var(--chalk)}
+.rules{list-style:none;display:grid;gap:.55rem;margin:.9rem 0 0}
+.rules li{position:relative;padding-left:1.6rem;color:var(--chalk-dim);font-size:.95rem}
+.rules li::before{content:"";position:absolute;left:0;top:.6em;width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 3px var(--field)}
+@media(max-width:840px){.feature{grid-template-columns:1fr;gap:1.4rem}.feature.flip .feature-media{order:0}}
+.policy{background:var(--card);border:1px solid var(--card-edge);border-left:3px solid var(--gold);border-radius:8px;padding:1.1rem 1.3rem;color:var(--chalk);font-size:1rem;margin:1rem 0 0}
+.policy em{color:var(--gold);font-style:normal}
+.timeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:.8rem;margin-top:1.4rem}
+.tick{background:var(--card);border:1px solid var(--card-edge);border-radius:8px;padding:.9rem 1rem;min-width:0}
+.tick .when{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:.35rem}
+.tick strong{display:block;font-size:.95rem;margin-bottom:.2rem}
+.tick span{font-size:.85rem;color:var(--chalk-dim)}
+details.mail summary{flex-direction:row}
+details.mail summary>span{display:grid;gap:.15rem;min-width:0}
+.mail-sub{font-family:var(--mono);font-weight:400;font-size:.8rem;color:var(--chalk-dim);overflow-wrap:anywhere}
+.mail-meta{font-size:.85rem;color:var(--chalk-dim);margin:0 0 .9rem}
+.mail-meta .k{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);display:inline-block;width:3.2rem}
+.mail-frame{background:#faf8f5;border-radius:8px;overflow:hidden;color:#1f1d1c}
+.mail-frame>div{padding:18px 10px!important}
+/* keep the site's dark-theme type rules out of the rendered emails */
+.mail-frame h2{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-transform:none;letter-spacing:0;line-height:1.3}
+.mail-frame p,.mail-frame li,.mail-frame td,.mail-frame strong,.mail-frame blockquote{color:#1f1d1c}
+.mail-frame p{margin:0 0 .9em;font-size:15px}
+.mail-frame p:last-child{margin-bottom:0}
+.mail-frame table{width:auto;font-size:inherit;margin:8px 0 12px}
+.mail-frame td{border:none;vertical-align:top}
+.mail-frame a:not([style*="color"]){color:#b3122b}
+.checks{counter-reset:c}
+</style>
+</head>
+<body>
+
+<nav aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="../">Drum Major <span>Portal</span></a>
+    <ul>
+      <li><a href="#calendar">Calendar</a></li>
+      <li><a href="#emails">Event emails</a></li>
+      <li><a href="#attendance">Attendance</a></li>
+      <li><a href="#appeals">Appeals</a></li>
+      <li><a href="#proofs">The emails</a></li>
+      <li><a href="#todo">What to do</a></li>
+      <li><a href="../">Docs</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header id="top" class="gridbg">
+  <div class="wrap hero">
+    <span class="hash">Set 2 · Fall 2026 update · For the drum majors</span>
+    <h1>A public calendar, and <em>emails that send themselves.</em></h1>
+    <p class="tagline">Every band event now lives on a calendar anyone can open or subscribe to. The portal emails the
+    band a week out, three days out and the morning of; takes roll; and lets a student appeal an absence with one
+    link — with the conflict rule spelled out every time. Here's what changed and what it means for you.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#calendar">See the public calendar</a>
+      <a class="btn btn-ghost" href="#proofs">Read the emails</a>
+      <a class="btn btn-ghost" href="#todo">What to do now</a>
+    </div>
+    <div class="hero-shot">
+      <img src="../img/whats-new/calendar.png" alt="The public band calendar: upcoming events grouped by month with date badges, times and locations, and a Subscribe (.ics) button" width="1440" height="900" fetchpriority="high">
+    </div>
+  </div>
+</header>
+
+<div class="dots" role="presentation"></div>
+
+<section id="calendar">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="set-tag">Set 2 · 1 of 5</span>
+      <h2>The public calendar</h2>
+      <p>No login, no app. Students and families open it, or subscribe once and every event lands in their own calendar.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-copy">
+        <ul class="rules">
+          <li><strong>One address for the whole season.</strong> Your portal's address plus <code>/calendar</code>. Share it in the group chat, put it on the band board, text it to parents.</li>
+          <li><strong>Subscribe once.</strong> The <em>Subscribe (.ics)</em> button gives a feed for Google Calendar (<em>Other calendars → + → From URL</em>) and Apple Calendar (<em>File → New Calendar Subscription</em>). New events show up on their phones within a few hours, no email needed.</li>
+          <li><strong>It's automatic.</strong> Anything you add under <em>Band Events</em> is on the calendar the moment you save it. Drum-major-only events stay private.</li>
+          <li><strong>Every email links to it.</strong> Reminders and the monthly overview all end with a <em>See the full calendar</em> button.</li>
+        </ul>
+      </div>
+      <div class="feature-media tall"><img loading="lazy" src="../img/whats-new/calendar.png" alt="Public calendar page" width="1440" height="900"></div>
+    </div>
+  </div>
+</section>
+
+<section id="emails" class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="set-tag">Set 2 · 2 of 5</span>
+      <h2>Events email themselves</h2>
+      <p>You add the event once and pick who's expected. The portal handles the nagging.</p>
+    </div>
+    <div class="feature flip">
+      <div class="feature-media"><img loading="lazy" src="../img/whats-new/events.png" alt="Band Events page: the new-event form with a Who's expected picker, and the event list" width="1440" height="900"></div>
+      <div class="feature-copy">
+        <ul class="rules">
+          <li><strong>Who's expected.</strong> Each band event names a class list — Jazz Band, Concert/Marching Band or Everyone. That decides who gets the emails and pre-fills the attendance sheet.</li>
+          <li><strong>No more email-on-create.</strong> Adding an event only emails people if it's <strong>within a week</strong>. Anything further out just goes on the calendar — nobody's inbox gets hit for a competition in November.</li>
+          <li><strong>Reminders at 9 AM.</strong> One week out, three days out, and the morning of. If the server was down one morning, it catches up the next — never twice.</li>
+          <li><strong>Monthly overview.</strong> On the 1st (if the month has anything more than a week away), everyone gets the month at a glance.</li>
+          <li><strong>You can see everything that went out</strong> under <em>Email Announcements → Sent</em>, with open counts, just like a normal announcement.</li>
+        </ul>
+        <div class="timeline">
+          <div class="tick"><span class="when">On creation</span><strong>New band event</strong><span>only if within 7 days</span></div>
+          <div class="tick"><span class="when">9 AM · −7 days</span><strong>One week out</strong><span>check your calendar now</span></div>
+          <div class="tick"><span class="when">9 AM · −3 days</span><strong>Three days out</strong><span>last day to report a conflict</span></div>
+          <div class="tick"><span class="when">9 AM · day of</span><strong>Today</strong><span>be early, right gear</span></div>
+        </div>
+        <p class="policy">Every one of those emails ends with the rule: <em>Attendance is mandatory and may impact your grade. If you cannot make it, email Mr. Costello and CC the drum major. Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut will be recorded.</em> The names are clickable — the mailto already has the CC filled in.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="attendance">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="set-tag">Set 2 · 3 of 5</span>
+      <h2>Taking roll</h2>
+      <p>Open the event, tap names, save. Season totals build themselves.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-copy">
+        <ul class="rules">
+          <li><strong>Attendance button on every band event.</strong> The sheet opens with the event's class list; switch lists at the top if you need to.</li>
+          <li><strong>Everyone starts Absent.</strong> Tap <em>Present</em>, <em>Late</em> or <em>Excused</em> as you call names — or <em>Mark all present</em> and fix the exceptions. The search box jumps to a name.</li>
+          <li><strong>Come back any time.</strong> Re-saving updates the sheet; the event row shows a <em>Taken</em> badge.</li>
+          <li><strong>Season totals</strong> live under <em>Attendance</em> in the sidebar: expected, present, late, excused, absent and a rate that ignores excused absences. Both screens export CSV for Mr. Costello.</li>
+        </ul>
+      </div>
+      <div class="feature-media"><img loading="lazy" src="../img/whats-new/attendance-sheet.png" alt="Attendance sheet: one row per student with Present / Late / Excused / Absent toggles and live counts" width="1440" height="900"></div>
+    </div>
+    <div class="feature flip">
+      <div class="feature-media"><img loading="lazy" src="../img/whats-new/attendance-summary.png" alt="Attendance page: pending appeals at the top, season totals per student below" width="1440" height="900"></div>
+      <div class="feature-copy">
+        <h2 style="font-size:1.3rem">The Attendance page</h2>
+        <p>Pending appeals sit at the top so nothing waits. Below it, the season table for whichever class list you pick.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="appeals" class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="set-tag">Set 2 · 4 of 5</span>
+      <h2>Absences and appeals</h2>
+      <p>The student hears about it the same day, and gets a fair way to fix a mistake. You get a two-button decision.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-copy">
+        <ul class="rules">
+          <li><strong>30 minutes after you save</strong>, every student still marked Absent gets an email: attendance is mandatory and may impact their grade, plus a personal <em>Appeal this absence</em> link. The half-hour is your window to fix a slip — re-saving restarts the clock, and nobody is ever emailed twice for the same event.</li>
+          <li><strong>The appeal is one text box.</strong> No login. They explain, you get a bell and an email.</li>
+          <li><strong>Excuse it or Deny</strong> on the Attendance page. <em>Excuse it</em> flips their record to Excused; either way the student gets an email with the decision.</li>
+          <li><strong>Fixing the sheet counts too.</strong> If you change someone from Absent to Present yourself, their pending appeal is approved automatically and they're told.</li>
+        </ul>
+      </div>
+      <div class="feature-media"><img loading="lazy" src="../img/whats-new/appeal-form.png" alt="Public appeal page a student sees: the event, their name, and a text box asking why the absence should be excused" width="1440" height="900"></div>
+    </div>
+    <div class="feature flip">
+      <div class="feature-media tall"><img loading="lazy" src="../img/whats-new/settings-policy.png" alt="Settings → Attendance policy: conflict contact name and email, and a picker for the drum major to CC" width="1440" height="900"></div>
+      <div class="feature-copy">
+        <h2 style="font-size:1.3rem">Who's named in the rule</h2>
+        <p><em>Settings → Attendance policy</em> holds the conflict contact (Mr. Costello, editable) and a <strong>drum major picked from the portal</strong> to CC. Their real name and address go into every email.</p>
+        <p>When that drum major graduates or is removed, the next leader who signs in sees a banner across the top asking them to pick a replacement — so the rule never points at nobody.</p>
+        <div class="feature-media" style="margin-top:.6rem"><img loading="lazy" src="../img/whats-new/cc-banner.png" alt="Banner at the top of the portal: Who should students CC on conflicts? with a drum major picker" width="1440" height="900" style="aspect-ratio:1440/300;object-position:top"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="proofs">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="set-tag">Set 2 · 5 of 5</span>
+      <h2>The emails, word for word</h2>
+      <p>Rendered exactly as they land, with sample names and dates. Open each one.</p>
+    </div>
+    <div class="doc-cols">
+      <div class="doc-block">
+        <h3>Event emails</h3>
+        <details class="mail" open>
+  <summary><span><strong>New band event</strong><span class="mail-sub">New band event: Homecoming Halftime Show — Fri, Oct 16 at 6:30 PM</span></span></summary>
+  <div class="body">
+    <p class="mail-meta"><span class="k">To</span>The event&#x27;s class list (Jazz Band, Concert/Marching Band or Everyone) + drum majors and admins<br><span class="k">Sent</span>The moment a band event is added with a date within the next 7 days. Events further out get no email — they go on the public calendar.</p>
+    <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
+    <div style="background:#fff;border:1px solid #e8e3dc;border-top:none;border-radius:0 0 8px 8px;padding:24px;font-size:15px;line-height:1.55">
+      <h2 style="margin:0 0 14px;font-size:20px;color:#1f1d1c">New band event</h2><p>A band event has been added for this week.</p><table role="presentation" style="border-collapse:collapse;margin:8px 0 12px"><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">What</td><td style="padding:4px 0;font-size:14px">Homecoming Halftime Show</td></tr><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">When</td><td style="padding:4px 0;font-size:14px">Fri, Oct 16 at 6:30 PM</td></tr><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">Where</td><td style="padding:4px 0;font-size:14px">Knowlton Stadium</td></tr></table><p style="white-space:pre-wrap">Full uniform. Call time is 5:45 in the band room — bring your flip folder and a water bottle.</p><p style="margin:16px 0 0;padding:12px 14px;background:#faf8f5;border-left:3px solid #b3122b;border-radius:0 6px 6px 0;font-size:14px"><strong>Attendance is mandatory</strong> and may impact your grade. If you cannot make it, email <a href="mailto:costello@winchesterps.org?cc=jkillian%40wpsstudent.com&subject=Conflict%3A%20Homecoming%20Halftime%20Show" style="font-weight:600;color:#b3122b">Mr. Costello</a> and CC <a href="mailto:jkillian@wpsstudent.com" style="font-weight:600;color:#b3122b">Jake Killian</a>. Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut will be recorded.</p><p style="margin:18px 0 6px"><a href="https://portal.example.org/calendar" style="display:inline-block;background:#b3122b;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600">See the full calendar</a></p>
+    <p style="font-size:12px;color:#6b6560;margin:0">Or paste this link: https://portal.example.org/calendar</p>
+    </div>
+    <p style="font-size:12px;color:#6b6560;margin:14px 4px 0">Sent via the Drum Major Portal</p>
+  </div>
+</div></div>
+  </div>
+</details><details class="mail">
+  <summary><span><strong>One week out</strong><span class="mail-sub">One week out: Homecoming Halftime Show — Fri, Oct 16 at 6:30 PM</span></span></summary>
+  <div class="body">
+    <p class="mail-meta"><span class="k">To</span>The event&#x27;s class list + leadership<br><span class="k">Sent</span>9:00 AM Eastern, 7 days before the event.</p>
+    <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
+    <div style="background:#fff;border:1px solid #e8e3dc;border-top:none;border-radius:0 0 8px 8px;padding:24px;font-size:15px;line-height:1.55">
+      <h2 style="margin:0 0 14px;font-size:20px;color:#1f1d1c">One week to go</h2><p>Heads up: this is one week away. Check your calendar now so any conflict can be cleared in time.</p><table role="presentation" style="border-collapse:collapse;margin:8px 0 12px"><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">What</td><td style="padding:4px 0;font-size:14px">Homecoming Halftime Show</td></tr><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">When</td><td style="padding:4px 0;font-size:14px">Fri, Oct 16 at 6:30 PM</td></tr><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">Where</td><td style="padding:4px 0;font-size:14px">Knowlton Stadium</td></tr></table><p style="white-space:pre-wrap">Full uniform. Call time is 5:45 in the band room — bring your flip folder and a water bottle.</p><p style="margin:16px 0 0;padding:12px 14px;background:#faf8f5;border-left:3px solid #b3122b;border-radius:0 6px 6px 0;font-size:14px"><strong>Attendance is mandatory</strong> and may impact your grade. If you cannot make it, email <a href="mailto:costello@winchesterps.org?cc=jkillian%40wpsstudent.com&subject=Conflict%3A%20Homecoming%20Halftime%20Show" style="font-weight:600;color:#b3122b">Mr. Costello</a> and CC <a href="mailto:jkillian@wpsstudent.com" style="font-weight:600;color:#b3122b">Jake Killian</a>. Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut will be recorded.</p><p style="margin:18px 0 6px"><a href="https://portal.example.org/calendar" style="display:inline-block;background:#b3122b;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600">See the full calendar</a></p>
+    <p style="font-size:12px;color:#6b6560;margin:0">Or paste this link: https://portal.example.org/calendar</p>
+    </div>
+    <p style="font-size:12px;color:#6b6560;margin:14px 4px 0">Sent via the Drum Major Portal</p>
+  </div>
+</div></div>
+  </div>
+</details><details class="mail">
+  <summary><span><strong>Three days out</strong><span class="mail-sub">3 days out: Homecoming Halftime Show — Fri, Oct 16 at 6:30 PM</span></span></summary>
+  <div class="body">
+    <p class="mail-meta"><span class="k">To</span>The event&#x27;s class list + leadership<br><span class="k">Sent</span>9:00 AM Eastern, 3 days before — the last day to report a conflict.</p>
+    <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
+    <div style="background:#fff;border:1px solid #e8e3dc;border-top:none;border-radius:0 0 8px 8px;padding:24px;font-size:15px;line-height:1.55">
+      <h2 style="margin:0 0 14px;font-size:20px;color:#1f1d1c">Three days to go</h2><p>Today is the last day to report a conflict without a cut being recorded.</p><table role="presentation" style="border-collapse:collapse;margin:8px 0 12px"><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">What</td><td style="padding:4px 0;font-size:14px">Homecoming Halftime Show</td></tr><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">When</td><td style="padding:4px 0;font-size:14px">Fri, Oct 16 at 6:30 PM</td></tr><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">Where</td><td style="padding:4px 0;font-size:14px">Knowlton Stadium</td></tr></table><p style="white-space:pre-wrap">Full uniform. Call time is 5:45 in the band room — bring your flip folder and a water bottle.</p><p style="margin:16px 0 0;padding:12px 14px;background:#faf8f5;border-left:3px solid #b3122b;border-radius:0 6px 6px 0;font-size:14px"><strong>Attendance is mandatory</strong> and may impact your grade. If you cannot make it, email <a href="mailto:costello@winchesterps.org?cc=jkillian%40wpsstudent.com&subject=Conflict%3A%20Homecoming%20Halftime%20Show" style="font-weight:600;color:#b3122b">Mr. Costello</a> and CC <a href="mailto:jkillian@wpsstudent.com" style="font-weight:600;color:#b3122b">Jake Killian</a>. Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut will be recorded.</p><p style="margin:18px 0 6px"><a href="https://portal.example.org/calendar" style="display:inline-block;background:#b3122b;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600">See the full calendar</a></p>
+    <p style="font-size:12px;color:#6b6560;margin:0">Or paste this link: https://portal.example.org/calendar</p>
+    </div>
+    <p style="font-size:12px;color:#6b6560;margin:14px 4px 0">Sent via the Drum Major Portal</p>
+  </div>
+</div></div>
+  </div>
+</details><details class="mail">
+  <summary><span><strong>Day of</strong><span class="mail-sub">Today: Homecoming Halftime Show — Fri, Oct 16 at 6:30 PM</span></span></summary>
+  <div class="body">
+    <p class="mail-meta"><span class="k">To</span>The event&#x27;s class list + leadership<br><span class="k">Sent</span>9:00 AM Eastern on the day of the event.</p>
+    <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
+    <div style="background:#fff;border:1px solid #e8e3dc;border-top:none;border-radius:0 0 8px 8px;padding:24px;font-size:15px;line-height:1.55">
+      <h2 style="margin:0 0 14px;font-size:20px;color:#1f1d1c">Today</h2><p>See you there. Be early, be in the right gear, and bring what the details below ask for.</p><table role="presentation" style="border-collapse:collapse;margin:8px 0 12px"><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">What</td><td style="padding:4px 0;font-size:14px">Homecoming Halftime Show</td></tr><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">When</td><td style="padding:4px 0;font-size:14px">Fri, Oct 16 at 6:30 PM</td></tr><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">Where</td><td style="padding:4px 0;font-size:14px">Knowlton Stadium</td></tr></table><p style="white-space:pre-wrap">Full uniform. Call time is 5:45 in the band room — bring your flip folder and a water bottle.</p><p style="margin:16px 0 0;padding:12px 14px;background:#faf8f5;border-left:3px solid #b3122b;border-radius:0 6px 6px 0;font-size:14px"><strong>Attendance is mandatory</strong> and may impact your grade. If you cannot make it, email <a href="mailto:costello@winchesterps.org?cc=jkillian%40wpsstudent.com&subject=Conflict%3A%20Homecoming%20Halftime%20Show" style="font-weight:600;color:#b3122b">Mr. Costello</a> and CC <a href="mailto:jkillian@wpsstudent.com" style="font-weight:600;color:#b3122b">Jake Killian</a>. Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut will be recorded.</p><p style="margin:18px 0 6px"><a href="https://portal.example.org/calendar" style="display:inline-block;background:#b3122b;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600">See the full calendar</a></p>
+    <p style="font-size:12px;color:#6b6560;margin:0">Or paste this link: https://portal.example.org/calendar</p>
+    </div>
+    <p style="font-size:12px;color:#6b6560;margin:14px 4px 0">Sent via the Drum Major Portal</p>
+  </div>
+</div></div>
+  </div>
+</details><details class="mail">
+  <summary><span><strong>Monthly overview</strong><span class="mail-sub">October band events — Winchester Band</span></span></summary>
+  <div class="body">
+    <p class="mail-meta"><span class="k">To</span>Everyone on the roster + leadership<br><span class="k">Sent</span>9:00 AM on the first run each month, only if at least one event that month is more than a week away.</p>
+    <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
+    <div style="background:#fff;border:1px solid #e8e3dc;border-top:none;border-radius:0 0 8px 8px;padding:24px;font-size:15px;line-height:1.55">
+      <h2 style="margin:0 0 14px;font-size:20px;color:#1f1d1c">October at a glance</h2><p>Here is everything on the band calendar this month. Each event also gets a reminder a week out, three days out, and the morning of.</p><ul style="padding-left:20px;margin:12px 0"><li style="margin:0 0 10px"><strong>Sectional rehearsal</strong><br /><span style="font-size:14px">Sat, Oct 3 at 9:00 AM · Band room</span></li><li style="margin:0 0 10px"><strong>Homecoming Halftime Show</strong><br /><span style="font-size:14px">Fri, Oct 16 at 6:30 PM · Knowlton Stadium</span></li><li style="margin:0 0 10px"><strong>MICCA Marching Festival</strong><br /><span style="font-size:14px">Sat, Oct 24 at 2:00 PM · Lynn, MA</span></li><li style="margin:0 0 10px"><strong>Halloween Parade</strong><br /><span style="font-size:14px">Fri, Oct 30 at 4:00 PM · Town Common</span></li></ul><p style="margin:16px 0 0;padding:12px 14px;background:#faf8f5;border-left:3px solid #b3122b;border-radius:0 6px 6px 0;font-size:14px"><strong>Attendance is mandatory</strong> and may impact your grade. If you cannot make it, email <a href="mailto:costello@winchesterps.org?cc=jkillian%40wpsstudent.com&subject=Conflict%3A%20October%20events" style="font-weight:600;color:#b3122b">Mr. Costello</a> and CC <a href="mailto:jkillian@wpsstudent.com" style="font-weight:600;color:#b3122b">Jake Killian</a>. Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut will be recorded.</p><p style="margin:18px 0 6px"><a href="https://portal.example.org/calendar" style="display:inline-block;background:#b3122b;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600">See the full calendar</a></p>
+    <p style="font-size:12px;color:#6b6560;margin:0">Or paste this link: https://portal.example.org/calendar</p>
+    </div>
+    <p style="font-size:12px;color:#6b6560;margin:14px 4px 0">Sent via the Drum Major Portal</p>
+  </div>
+</div></div>
+  </div>
+</details>
+      </div>
+      <div class="doc-block">
+        <h3>Absences and appeals</h3>
+        <details class="mail" open>
+  <summary><span><strong>Marked absent</strong><span class="mail-sub">Marked absent: Homecoming Halftime Show — Fri, Oct 16 at 6:30 PM</span></span></summary>
+  <div class="body">
+    <p class="mail-meta"><span class="k">To</span>The student<br><span class="k">Sent</span>30 minutes after an attendance sheet is saved, to each student still marked Absent (once per event; re-saving restarts the clock).</p>
+    <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
+    <div style="background:#fff;border:1px solid #e8e3dc;border-top:none;border-radius:0 0 8px 8px;padding:24px;font-size:15px;line-height:1.55">
+      <h2 style="margin:0 0 14px;font-size:20px;color:#1f1d1c">You were marked absent</h2><p>Hi Ann Lee, you were marked <strong>absent</strong> from <strong>Homecoming Halftime Show</strong> (Fri, Oct 16 at 6:30 PM).</p><p style="margin:16px 0 0;padding:12px 14px;background:#faf8f5;border-left:3px solid #b3122b;border-radius:0 6px 6px 0;font-size:14px"><strong>Attendance is mandatory</strong> and may impact your grade. If you cannot make it, email <a href="mailto:costello@winchesterps.org?cc=jkillian%40wpsstudent.com&subject=Conflict%3A%20Homecoming%20Halftime%20Show" style="font-weight:600;color:#b3122b">Mr. Costello</a> and CC <a href="mailto:jkillian@wpsstudent.com" style="font-weight:600;color:#b3122b">Jake Killian</a>. Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut will be recorded.</p><p style="margin-top:16px">If this absence was excused — or you were there — and it wasn't recorded correctly, appeal it and a drum major will review it:</p><p style="margin:18px 0 6px"><a href="https://portal.example.org/appeal/8f3c…e21a" style="display:inline-block;background:#b3122b;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600">Appeal this absence</a></p>
+    <p style="font-size:12px;color:#6b6560;margin:0">Or paste this link: https://portal.example.org/appeal/8f3c…e21a</p><p style="font-size:12px;margin-top:12px">This link is personal to you. It stays valid until the absence is cleared.</p>
+    </div>
+    <p style="font-size:12px;color:#6b6560;margin:14px 4px 0">Sent via the Drum Major Portal</p>
+  </div>
+</div></div>
+  </div>
+</details><details class="mail">
+  <summary><span><strong>New absence appeal</strong><span class="mail-sub">Absence appeal: Ann Lee — Homecoming Halftime Show</span></span></summary>
+  <div class="body">
+    <p class="mail-meta"><span class="k">To</span>Drum majors and admins<br><span class="k">Sent</span>When a student submits the appeal form from their link.</p>
+    <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
+    <div style="background:#fff;border:1px solid #e8e3dc;border-top:none;border-radius:0 0 8px 8px;padding:24px;font-size:15px;line-height:1.55">
+      <h2 style="margin:0 0 14px;font-size:20px;color:#1f1d1c">New absence appeal</h2><p><strong>Ann Lee</strong> is appealing their absence from <strong>Homecoming Halftime Show</strong> (Fri, Oct 16 at 6:30 PM):</p><blockquote style="margin:8px 0 12px;padding:10px 14px;border-left:3px solid #b3122b;background:#faf8f5;border-radius:0 6px 6px 0;white-space:pre-wrap">I emailed Mr. Costello on Monday about my orthodontist appointment and he said it was fine.</blockquote><p style="margin:18px 0 6px"><a href="https://portal.example.org/attendance" style="display:inline-block;background:#b3122b;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600">Review appeals</a></p>
+    <p style="font-size:12px;color:#6b6560;margin:0">Or paste this link: https://portal.example.org/attendance</p>
+    </div>
+    <p style="font-size:12px;color:#6b6560;margin:14px 4px 0">Sent via the Drum Major Portal</p>
+  </div>
+</div></div>
+  </div>
+</details><details class="mail">
+  <summary><span><strong>Absence excused</strong><span class="mail-sub">Absence excused: Homecoming Halftime Show</span></span></summary>
+  <div class="body">
+    <p class="mail-meta"><span class="k">To</span>The student<br><span class="k">Sent</span>When a drum major clicks Excuse it — or fixes the status on the sheet — for a pending appeal.</p>
+    <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
+    <div style="background:#fff;border:1px solid #e8e3dc;border-top:none;border-radius:0 0 8px 8px;padding:24px;font-size:15px;line-height:1.55">
+      <h2 style="margin:0 0 14px;font-size:20px;color:#1f1d1c">Your appeal was approved</h2><p>Hi Ann Lee, your absence from <strong>Homecoming Halftime Show</strong> (Fri, Oct 16 at 6:30 PM) is now recorded as <strong>Excused</strong>.</p>
+    </div>
+    <p style="font-size:12px;color:#6b6560;margin:14px 4px 0">Sent via the Drum Major Portal</p>
+  </div>
+</div></div>
+  </div>
+</details><details class="mail">
+  <summary><span><strong>Appeal not approved</strong><span class="mail-sub">Appeal not approved: Homecoming Halftime Show</span></span></summary>
+  <div class="body">
+    <p class="mail-meta"><span class="k">To</span>The student<br><span class="k">Sent</span>When a drum major clicks Deny.</p>
+    <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
+    <div style="background:#fff;border:1px solid #e8e3dc;border-top:none;border-radius:0 0 8px 8px;padding:24px;font-size:15px;line-height:1.55">
+      <h2 style="margin:0 0 14px;font-size:20px;color:#1f1d1c">Your appeal was not approved</h2><p>Hi Ann Lee, your absence from <strong>Homecoming Halftime Show</strong> (Fri, Oct 16 at 6:30 PM) stays recorded as absent.</p><p>If you think that's wrong, talk to Mr. Costello directly.</p><p style="margin:16px 0 0;padding:12px 14px;background:#faf8f5;border-left:3px solid #b3122b;border-radius:0 6px 6px 0;font-size:14px"><strong>Attendance is mandatory</strong> and may impact your grade. If you cannot make it, email <a href="mailto:costello@winchesterps.org?cc=jkillian%40wpsstudent.com&subject=Conflict%3A%20Homecoming%20Halftime%20Show" style="font-weight:600;color:#b3122b">Mr. Costello</a> and CC <a href="mailto:jkillian@wpsstudent.com" style="font-weight:600;color:#b3122b">Jake Killian</a>. Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut will be recorded.</p>
+    </div>
+    <p style="font-size:12px;color:#6b6560;margin:14px 4px 0">Sent via the Drum Major Portal</p>
+  </div>
+</div></div>
+  </div>
+</details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="todo" class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="set-tag">Drill · What to do now</span>
+      <h2>Your part</h2>
+      <p>Five habits and the system runs itself.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><span class="set">Set 1</span><h3>Put every event in as soon as you know it</h3><p>Title, date, time, place, and who's expected. Far-out events cost nobody an email — they just appear on the calendar and in the monthly overview.</p></div>
+      <div class="step"><span class="set">Set 2</span><h3>Share the calendar address once</h3><p>Your portal address + <code>/calendar</code>. Tell people to hit <em>Subscribe</em> so it lives on their phone.</p></div>
+      <div class="step"><span class="set">Set 3</span><h3>Take roll at every rehearsal and performance</h3><p>Open the event → <em>Attendance</em> → tap names → <em>Save</em>. You have 30 minutes to fix mistakes before absence emails go out.</p></div>
+      <div class="step"><span class="set">Set 4</span><h3>Check the Attendance page for appeals</h3><p>You'll get a bell and an email when one comes in. <em>Excuse it</em> or <em>Deny</em>; the student is told either way.</p></div>
+      <div class="step"><span class="set">Set 5</span><h3>Keep the CC drum major current</h3><p>If the banner asks who should be CC'd on conflicts, pick someone — it means the previous person is gone.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="dots" role="presentation"></div>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Drum Major Portal</strong> — Fall 2026 update.</p>
+    <p style="margin-top:.5rem"><a href="../">Back to the documentation</a> · <a href="https://github.com/ItsRecharge/drummajor-portal">Source on GitHub</a></p>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Enlarged screenshot">
+  <img alt="">
+  <span class="hint">Click anywhere or press Esc to close</span>
+</div>
+<script>
+(function(){
+  var lb=document.getElementById('lightbox'),img=lb.querySelector('img');
+  document.querySelectorAll('.feature-media img,.hero-shot img').forEach(function(el){
+    el.addEventListener('click',function(){img.src=el.src;img.alt=el.alt;lb.hidden=false;document.body.style.overflow='hidden';});
+  });
+  function close(){lb.hidden=true;img.src='';document.body.style.overflow='';}
+  lb.addEventListener('click',close);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!lb.hidden)close();});
+})();
+</script>
+</body>
+</html>
