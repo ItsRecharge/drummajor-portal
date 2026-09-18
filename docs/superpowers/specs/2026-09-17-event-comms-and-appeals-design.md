@@ -139,3 +139,14 @@ Reuse: `enqueueAnnouncement`/`resolveRecipients` (`src/lib/announce.ts`), `notif
 4. Appeals: save a sheet with one Absent, run `processAbsenceEmails(now + 31 min)`, assert `appealToken` + `absenceEmailedAt` set and an announcement-free `sendMail` call (SMTP unconfigured on PGlite → job skips; verify with the Docker Postgres + a dummy SMTP via `smtp4dev`/Mailpit if available, else assert the DB side and the rendered template). Open `/appeal/<token>` logged out → submit → pending on `/attendance` → Approve → record Excused, appeal link now shows Approved; Deny path likewise.
 5. `DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build` lists `/calendar`, `/calendar.ics`, `/appeal/[token]`.
 6. Never open `.pglite` from a second process while dev runs (corrupted it on 2026-09-16).
+
+---
+
+## Amendment (2026-09-17, later the same day)
+
+The CC is no longer a free-text name/email. `AppSettings.absenceCcUserId` points at a portal user (drum major or
+admin, `onDelete: SetNull`); their current name and email are used in every policy sentence. Settings → Attendance
+policy offers a picker of leadership users. While no valid CC user exists (never set, deleted, or demoted below
+leadership) every leader who signs in sees a banner across the app asking them to pick one; any leader can answer
+it. Emails omit the "and CC …" clause until someone is set. `absenceCcName`/`absenceCcEmail` were dropped from
+migration 8 before it shipped.

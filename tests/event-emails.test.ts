@@ -50,6 +50,10 @@ test("conflictPolicyHtml carries the policy text and links names when emails are
   const plain = conflictPolicyHtml(namesOnly, "Fall Rehearsal");
   assert.ok(!plain.includes("mailto:"));
   assert.ok(plain.includes("Mr. Costello") && plain.includes("Jake Killian"));
+  // No drum major picked yet: the sentence just names the contact.
+  const noCc = conflictPolicyHtml({ contactName: "Mr. Costello", contactEmail: "c@x.org" }, "Fall Rehearsal");
+  assert.ok(noCc.includes("email <a href=\"mailto:c@x.org?subject=Conflict%3A%20Fall%20Rehearsal\""));
+  assert.ok(!noCc.includes("CC"));
 });
 
 test("eventCreatedEmail: subject, escaped title, details, policy, calendar link", () => {

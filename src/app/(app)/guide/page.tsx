@@ -210,8 +210,9 @@ export default async function GuidePage() {
           <li>
             The conflict rule in every email: <em>attendance is mandatory and may impact your grade; if you
             cannot make it, email the conflict contact and CC the drum major; unless it is a genuine emergency,
-            conflicts must be cleared 3 days ahead or a cut is recorded.</em> Set those two people (and their
-            addresses) in <em>Settings → Attendance policy</em> each year.
+            conflicts must be cleared 3 days ahead or a cut is recorded.</em> Set the contact (and their address)
+            and pick the drum major to CC in <em>Settings → Attendance policy</em>. When that drum major graduates
+            or is removed, the next leader to sign in is asked to pick a new one.
           </li>
           <li>
             The emails show up under <em>Email Announcements → Sent</em> like any other message, so you can see

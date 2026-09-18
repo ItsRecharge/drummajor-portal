@@ -8,7 +8,7 @@ import { notifyAll } from "@/lib/notify";
 import { emailLeadership, getBandName } from "@/lib/leadership";
 import { appBaseUrl } from "@/lib/email";
 import { appealSubmittedEmail } from "@/lib/absence-emails";
-import { getConflictPolicy } from "@/lib/event-comms";
+import { getConflictPolicy } from "@/lib/attendance-policy";
 import { AttendanceStatus } from "@/generated/prisma/client";
 import { formatEventWhen } from "@/app/(app)/events/event-dates";
 

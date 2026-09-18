@@ -154,8 +154,8 @@ const optionalEmail = z.preprocess(
 export const attendancePolicySchema = z.object({
   absenceContactName: z.string().trim().min(1, "Required"),
   absenceContactEmail: optionalEmail,
-  absenceCcName: z.string().trim().min(1, "Required"),
-  absenceCcEmail: optionalEmail,
+  // A portal user id (drum major or admin) to CC; blank = nobody yet.
+  absenceCcUserId: z.string().optional(),
 });
 
 // Public absence appeal (the student's personal link + a short reason).

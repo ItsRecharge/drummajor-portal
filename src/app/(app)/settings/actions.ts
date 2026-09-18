@@ -16,6 +16,7 @@ import {
   parseDriveFolderId,
 } from "@/lib/drive";
 import { Role } from "@/generated/prisma/client";
+import { isLeadership } from "@/lib/roles";
 import { getSession, destroyOtherSessions } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { randomToken, expiresInHours } from "@/lib/tokens";
@@ -248,21 +249,33 @@ export async function saveAttendancePolicyAction(_prev: ActionState, formData: F
   const parsed = parseForm(attendancePolicySchema, formData);
   if (!parsed.ok) return parsed.state;
 
+  let cc: { id: string; name: string } | null = null;
+  if (parsed.data.absenceCcUserId) {
+    const target = await prisma.user.findUnique({
+      where: { id: parsed.data.absenceCcUserId },
+      select: { id: true, name: true, role: true },
+    });
+    if (!target || !isLeadership(target.role)) {
+      return { fieldErrors: { absenceCcUserId: "Pick a drum major or admin from the portal." } };
+    }
+    cc = target;
+  }
+
   const id = await ensureAppSettings();
   await prisma.appSettings.update({
     where: { id },
     data: {
       absenceContactName: parsed.data.absenceContactName,
       absenceContactEmail: parsed.data.absenceContactEmail ?? null,
-      absenceCcName: parsed.data.absenceCcName,
-      absenceCcEmail: parsed.data.absenceCcEmail ?? null,
+      absenceCcUserId: cc?.id ?? null,
     },
   });
   await logAudit({
     actorId: user.id,
     action: "ATTENDANCE_POLICY_UPDATED",
-    target: `${parsed.data.absenceContactName} / cc ${parsed.data.absenceCcName}`,
+    target: `${parsed.data.absenceContactName} / cc ${cc?.name ?? "nobody"}`,
   });
+  revalidatePath("/", "layout");
   revalidatePath("/settings");
   return { success: true, message: "Conflict contacts saved." };
 }

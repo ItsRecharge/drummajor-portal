@@ -10,7 +10,7 @@ import { countStatuses, parseAttendanceForm } from "@/lib/attendance";
 import { getGroupContacts } from "@/lib/attendance-data";
 import { sendMail } from "@/lib/email";
 import { getBandName } from "@/lib/leadership";
-import { getConflictPolicy } from "@/lib/event-comms";
+import { getConflictPolicy } from "@/lib/attendance-policy";
 import { appealDecisionEmail } from "@/lib/absence-emails";
 import { AppealStatus, AttendanceStatus, EventAudience, Role } from "@/generated/prisma/client";
 import { formatEventWhen } from "../../event-dates";

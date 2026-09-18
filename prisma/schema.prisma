@@ -44,11 +44,13 @@ model AppSettings {
   approvalRequired Boolean  @default(false)
   setupComplete    Boolean  @default(false)
   // Who students must email about an event conflict (shown in every event
-  // email). Names are seeded; addresses are entered in Settings.
+  // email): a free-text contact (the director) plus a portal drum major to CC.
+  // If that user is deleted or demoted, the next leader to sign in is asked to
+  // pick a new one.
   absenceContactName  String?
   absenceContactEmail String?
-  absenceCcName       String?
-  absenceCcEmail      String?
+  absenceCcUserId     String?
+  absenceCcUser       User?    @relation("AbsenceCc", fields: [absenceCcUserId], references: [id], onDelete: SetNull)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
@@ -93,6 +95,7 @@ model User {
   emailVerifTokens  EmailVerification[]
   passwordResets    PasswordReset[]
   appealDecisions   AbsenceAppeal[]     @relation("AppealDecider")
+  absenceCcFor      AppSettings[]       @relation("AbsenceCc")
 }
 
 // Server-side session records (Auth.js DB sessions / log-out-other-devices).

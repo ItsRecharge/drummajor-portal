@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AppealStatus } from "@/generated/prisma/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ATTENDANCE_LABELS, type AttendanceStatus as Status } from "@/lib/attendance";
-import { getConflictPolicy } from "@/lib/event-comms";
+import { getConflictPolicy } from "@/lib/attendance-policy";
 import { formatEventWhen } from "@/app/(app)/events/event-dates";
 import { AppealForm } from "./appeal-form";
 
@@ -62,9 +62,9 @@ export default async function AppealPage({ params }: { params: Promise<{ token: 
         <p className="eyebrow">Attendance</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight uppercase">Appeal an absence</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Attendance is mandatory and may impact your grade. Conflicts must be cleared with {policy.contactName} (CC{" "}
-          {policy.ccName}) at least three days ahead; this form is for absences that were excused or recorded
-          incorrectly.
+          Attendance is mandatory and may impact your grade. Conflicts must be cleared with {policy.contactName}
+          {policy.ccName ? ` (CC ${policy.ccName})` : ""} at least three days ahead; this form is for absences that
+          were excused or recorded incorrectly.
         </p>
       </div>
       <Card>

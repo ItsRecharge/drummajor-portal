@@ -7,7 +7,8 @@ import { DriveSettings } from "./drive-forms";
 import { SmtpSettings } from "./smtp-forms";
 import { AttendancePolicySettings } from "./attendance-policy-forms";
 import { getAppSettings } from "@/lib/settings";
-import { DEFAULT_CC_NAME, DEFAULT_CONTACT_NAME } from "@/lib/event-emails";
+import { DEFAULT_CONTACT_NAME } from "@/lib/event-emails";
+import { getLeadershipUsers } from "@/lib/leadership";
 import { getSmtpConfig } from "@/lib/email";
 import { isAdmin } from "@/lib/roles";
 import { getDriveItem, getRootFolderId, getServiceAccountEmail, isDriveConfigured } from "@/lib/drive";
@@ -22,7 +23,7 @@ export default async function SettingsPage() {
   // failures are shown inline rather than breaking the page.
   const admin = isAdmin(user.role);
   const smtp = admin ? await getSmtpConfig() : null;
-  const policy = admin ? await getAppSettings() : null;
+  const [policy, leaders] = admin ? await Promise.all([getAppSettings(), getLeadershipUsers()]) : [null, []];
   let drive: { configured: boolean; saEmail: string | null; rootId: string | null; rootName: string | null; rootError: string | null } | null = null;
   if (admin) {
     const [configured, saEmail, rootId] = await Promise.all([isDriveConfigured(), getServiceAccountEmail(), getRootFolderId()]);
@@ -102,15 +103,16 @@ export default async function SettingsPage() {
           <CardHeader>
             <CardTitle>Attendance policy</CardTitle>
             <CardDescription>
-              Who students email about a conflict. Quoted in every event reminder and absence notice.
+              Who students email about a conflict, and which drum major is CC&apos;d. Quoted in every event reminder
+              and absence notice.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <AttendancePolicySettings
               contactName={policy?.absenceContactName ?? DEFAULT_CONTACT_NAME}
               contactEmail={policy?.absenceContactEmail ?? ""}
-              ccName={policy?.absenceCcName ?? DEFAULT_CC_NAME}
-              ccEmail={policy?.absenceCcEmail ?? ""}
+              ccUserId={policy?.absenceCcUserId ?? ""}
+              leaders={leaders}
             />
           </CardContent>
         </Card>

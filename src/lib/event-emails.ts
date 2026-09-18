@@ -3,17 +3,17 @@
 import { button, escapeText, headingHtml, meta, note, shell } from "./email-layout.ts";
 import type { ReminderKind } from "./event-schedule.ts";
 
-// Who a student must email about a conflict. Names always render; the mailto
-// link appears only once the admin has entered addresses in Settings.
+// Who a student must email about a conflict. The contact always renders; the
+// mailto link appears once the admin has entered an address in Settings. The
+// CC is the drum major picked in Settings and is omitted while none is set.
 export type ConflictPolicy = {
   contactName: string;
   contactEmail?: string | null;
-  ccName: string;
+  ccName?: string | null;
   ccEmail?: string | null;
 };
 
 export const DEFAULT_CONTACT_NAME = "Mr. Costello";
-export const DEFAULT_CC_NAME = "Jake Killian";
 
 // `body` is the inner HTML (heading + content) for the announcement queue,
 // which adds the shell and tracking pixel at send time; `html` is the fully
@@ -52,9 +52,9 @@ function person(name: string, email: string | null | undefined, href: string | n
 
 export function conflictPolicyHtml(policy: ConflictPolicy, eventTitle: string): string {
   const contact = person(policy.contactName, policy.contactEmail, conflictMailto(policy, eventTitle));
-  const cc = person(policy.ccName, policy.ccEmail, null);
+  const cc = policy.ccName ? ` and CC ${person(policy.ccName, policy.ccEmail, null)}` : "";
   return note(
-    `<strong>Attendance is mandatory</strong> and may impact your grade. If you cannot make it, email ${contact} and CC ${cc}. ` +
+    `<strong>Attendance is mandatory</strong> and may impact your grade. If you cannot make it, email ${contact}${cc}. ` +
       `Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut will be recorded.`,
   );
 }

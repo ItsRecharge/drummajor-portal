@@ -414,8 +414,10 @@ band events carry a "who's expected" class list; creating one emails it only whe
 week (`announceEventIfSoon`), otherwise it appears on the public calendar (`/calendar`, feed `/calendar.ics`,
 route group `(open)`). A 9 AM `America/New_York` cron (`runDailyEventJobs`) sends reminders 7 days / 3 days /
 day-of (`EventNotice` dedupes; rules in `src/lib/event-schedule.ts`) and a monthly overview on the first run
-each month (`DigestLog`). Every event email quotes the conflict policy with contacts from Settings →
-Attendance policy (`AppSettings.absenceContact*`). Migration `8_event_comms`.
+each month (`DigestLog`). Every event email quotes the conflict policy: a free-text contact plus a portal drum major to CC
+(Settings → Attendance policy; `AppSettings.absenceContact*` + `absenceCcUserId` FK SetNull). While no CC user
+is set — first setup, or that person deleted/demoted — leaders see a banner on every page asking them to pick
+one (`CcAssignmentBanner`, `assignAbsenceCcAction`). Migration `8_event_comms`.
 
 Absence appeals (2026-09-17, `feat/event-comms`): 30 minutes after a sheet is saved, students still Absent
 are emailed once (`processAbsenceEmails`, every-minute tick; `AttendanceRecord.absenceEmailedAt/appealToken`)

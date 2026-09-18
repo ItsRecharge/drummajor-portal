@@ -8,7 +8,7 @@ import { logAudit } from "@/lib/audit";
 import type { ActionState } from "@/lib/form";
 import { sendMail } from "@/lib/email";
 import { getBandName } from "@/lib/leadership";
-import { getConflictPolicy } from "@/lib/event-comms";
+import { getConflictPolicy } from "@/lib/attendance-policy";
 import { appealDecisionEmail } from "@/lib/absence-emails";
 import { AppealStatus, AttendanceStatus, Role } from "@/generated/prisma/client";
 import { formatEventWhen } from "../events/event-dates";

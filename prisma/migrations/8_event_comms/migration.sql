@@ -30,8 +30,10 @@ CREATE UNIQUE INDEX "DigestLog_period_key" ON "DigestLog"("period");
 
 ALTER TABLE "AppSettings" ADD COLUMN "absenceContactName" TEXT;
 ALTER TABLE "AppSettings" ADD COLUMN "absenceContactEmail" TEXT;
-ALTER TABLE "AppSettings" ADD COLUMN "absenceCcName" TEXT;
-ALTER TABLE "AppSettings" ADD COLUMN "absenceCcEmail" TEXT;
+ALTER TABLE "AppSettings" ADD COLUMN "absenceCcUserId" TEXT;
+ALTER TABLE "AppSettings" ADD CONSTRAINT "AppSettings_absenceCcUserId_fkey"
+  FOREIGN KEY ("absenceCcUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- Seed the names; the admin enters the addresses in Settings.
-UPDATE "AppSettings" SET "absenceContactName" = 'Mr. Costello', "absenceCcName" = 'Jake Killian';
+-- Seed the contact name; the admin enters the address and picks the CC'd
+-- drum major in Settings (the sign-on prompt asks until one is set).
+UPDATE "AppSettings" SET "absenceContactName" = 'Mr. Costello';

@@ -7,7 +7,7 @@ import { appBaseUrl, getSmtpConfig, sendMail } from "@/lib/email";
 import { getBandName } from "@/lib/leadership";
 import { randomToken } from "@/lib/tokens";
 import { absenceEmail } from "@/lib/absence-emails";
-import { getConflictPolicy } from "@/lib/event-comms";
+import { getConflictPolicy } from "@/lib/attendance-policy";
 import { AttendanceStatus, EventAudience } from "@/generated/prisma/client";
 import { formatEventWhen } from "@/app/(app)/events/event-dates";
 

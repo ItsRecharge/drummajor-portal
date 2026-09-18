@@ -8,7 +8,6 @@ import { notifyAll } from "@/lib/notify";
 import { appBaseUrl } from "@/lib/email";
 import { getBandName } from "@/lib/leadership";
 import { ensureBuiltInGroups, EVERYONE } from "@/lib/groups";
-import { getAppSettings } from "@/lib/settings";
 import { EventAudience, Role, type Event, type EventNoticeKind } from "@/generated/prisma/client";
 import {
   DEFAULT_TZ,
@@ -23,27 +22,15 @@ import {
   type NoticeKind,
 } from "@/lib/event-schedule";
 import {
-  DEFAULT_CC_NAME,
-  DEFAULT_CONTACT_NAME,
   eventCreatedEmail,
   eventReminderEmail,
   monthlyDigestEmail,
-  type ConflictPolicy,
   type EventMail,
 } from "@/lib/event-emails";
 import { formatEventWhen } from "@/app/(app)/events/event-dates";
+import { getConflictPolicy } from "@/lib/attendance-policy";
 
 const DAY_MS = 86_400_000;
-
-export async function getConflictPolicy(): Promise<ConflictPolicy> {
-  const s = await getAppSettings();
-  return {
-    contactName: s?.absenceContactName?.trim() || DEFAULT_CONTACT_NAME,
-    contactEmail: s?.absenceContactEmail?.trim() || null,
-    ccName: s?.absenceCcName?.trim() || DEFAULT_CC_NAME,
-    ccEmail: s?.absenceCcEmail?.trim() || null,
-  };
-}
 
 export function publicCalendarUrl(): string {
   return `${appBaseUrl()}/calendar`;
