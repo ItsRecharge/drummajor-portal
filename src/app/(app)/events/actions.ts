@@ -8,13 +8,11 @@ import { requireRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { parseForm, type ActionState } from "@/lib/form";
 import { eventSchema } from "@/lib/validation";
-import { ensureBuiltInGroups, EVERYONE } from "@/lib/groups";
-import { enqueueAnnouncement } from "@/lib/announce";
-import { notifyAll, notifyUsers } from "@/lib/notify";
-import { escapeHtml } from "@/lib/sanitize";
+import { notifyUsers } from "@/lib/notify";
 import { appBaseUrl, dmEventEmail } from "@/lib/email";
 import { buildIcs } from "@/lib/ics";
 import { emailLeadership, getBandName, getLeadershipUsers } from "@/lib/leadership";
+import { announceEventIfSoon } from "@/lib/event-comms";
 import { Role, EventAudience, type Event } from "@/generated/prisma/client";
 import { eventLocalDate, formatEventWhen } from "./event-dates";
 
@@ -24,26 +22,12 @@ function pathFor(audience: EventAudience): string {
   return audience === EventAudience.DRUM_MAJORS ? "/dm-events" : "/events";
 }
 
-// "Email everyone" on a band event creates an announcement to Everyone
-// (reusing the send queue) plus an in-app notification for the leadership.
-async function announceBandEvent(actorId: string, event: Event): Promise<void> {
-  await ensureBuiltInGroups();
-  const everyone = await prisma.group.findUnique({ where: { name: EVERYONE } });
-  if (!everyone) return;
-
-  const when = formatEventWhen(event.date, event.time);
-  const bodyHtml =
-    `<p><strong>${escapeHtml(event.title)}</strong></p><p>${escapeHtml(when)}</p>` +
-    (event.location ? `<p>${escapeHtml(event.location)}</p>` : "") +
-    (event.description ? `<p>${escapeHtml(event.description)}</p>` : "");
-  const announcement = await prisma.announcement.create({
-    data: { subject: `Event: ${event.title}`, bodyHtml, authorId: actorId },
-  });
-  await prisma.announcementRecipientGroup.create({
-    data: { announcementId: announcement.id, groupId: everyone.id },
-  });
-  await enqueueAnnouncement(announcement.id, {});
-  await notifyAll("EVENT", { title: event.title, when }, actorId);
+// The class list expected at a band event. Only built-in groups are accepted;
+// anything else means Everyone (stored as null).
+async function expectedGroupId(groupId: string | undefined): Promise<string | null> {
+  if (!groupId) return null;
+  const group = await prisma.group.findUnique({ where: { id: groupId }, select: { id: true, builtIn: true } });
+  return group?.builtIn ? group.id : null;
 }
 
 // Drum-major events always go to the leadership team: bell for everyone but
@@ -83,7 +67,7 @@ export async function createEventAction(_prev: ActionState, formData: FormData):
   if (!parsed.ok) return parsed.state;
 
   const audience = parsed.data.audience === "DRUM_MAJORS" ? EventAudience.DRUM_MAJORS : EventAudience.BAND;
-  const notify = audience === EventAudience.DRUM_MAJORS ? true : formData.get("notify") === "on";
+  const attendanceGroupId = audience === EventAudience.BAND ? await expectedGroupId(parsed.data.groupId) : null;
   const event = await prisma.event.create({
     data: {
       title: parsed.data.title,
@@ -92,18 +76,21 @@ export async function createEventAction(_prev: ActionState, formData: FormData):
       date: parsed.data.date,
       time: parsed.data.time || null,
       audience,
-      notify,
+      // DM events always notify; band events only when within a week (set below).
+      notify: audience === EventAudience.DRUM_MAJORS,
+      attendanceGroupId,
       createdById: actor.id,
     },
   });
   await logAudit({ actorId: actor.id, action: "EVENT_CREATED", target: event.title, metadata: { audience } });
 
   if (audience === EventAudience.DRUM_MAJORS) await inviteDrumMajors(actor, event);
-  else if (notify) await announceBandEvent(actor.id, event);
+  else await announceEventIfSoon(event);
 
   revalidatePath("/events");
   revalidatePath("/dm-events");
   revalidatePath("/dashboard");
+  revalidatePath("/calendar");
   redirect(pathFor(audience));
 }
 
@@ -117,5 +104,6 @@ export async function deleteEventAction(formData: FormData): Promise<void> {
   revalidatePath("/events");
   revalidatePath("/dm-events");
   revalidatePath("/dashboard");
+  revalidatePath("/calendar");
   redirect(pathFor(event.audience));
 }

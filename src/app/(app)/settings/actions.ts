@@ -16,13 +16,14 @@ import {
   parseDriveFolderId,
 } from "@/lib/drive";
 import { Role } from "@/generated/prisma/client";
+import { isLeadership } from "@/lib/roles";
 import { getSession, destroyOtherSessions } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { randomToken, expiresInHours } from "@/lib/tokens";
 import { verificationEmail, sendMail, sendTestEmail, getSmtpConfig, type SmtpConfig } from "@/lib/email";
 import { parseForm, type ActionState } from "@/lib/form";
 import { z } from "zod";
-import { profileSchema, changePasswordSchema, changeEmailSchema, smtpSchema } from "@/lib/validation";
+import { profileSchema, changePasswordSchema, changeEmailSchema, smtpSchema, attendancePolicySchema } from "@/lib/validation";
 
 export async function updateProfileAction(
   _prev: ActionState,
@@ -237,4 +238,44 @@ export async function testSmtpSettingsAction(_prev: ActionState, _formData: Form
   } catch (err) {
     return { error: `Gmail rejected the send: ${err instanceof Error ? err.message : String(err)}` };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Attendance policy (admin only): who students email about a conflict.
+// ---------------------------------------------------------------------------
+
+export async function saveAttendancePolicyAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user } = await requireRole(...ADMIN_ONLY);
+  const parsed = parseForm(attendancePolicySchema, formData);
+  if (!parsed.ok) return parsed.state;
+
+  let cc: { id: string; name: string } | null = null;
+  if (parsed.data.absenceCcUserId) {
+    const target = await prisma.user.findUnique({
+      where: { id: parsed.data.absenceCcUserId },
+      select: { id: true, name: true, role: true },
+    });
+    if (!target || !isLeadership(target.role)) {
+      return { fieldErrors: { absenceCcUserId: "Pick a drum major or admin from the portal." } };
+    }
+    cc = target;
+  }
+
+  const id = await ensureAppSettings();
+  await prisma.appSettings.update({
+    where: { id },
+    data: {
+      absenceContactName: parsed.data.absenceContactName,
+      absenceContactEmail: parsed.data.absenceContactEmail ?? null,
+      absenceCcUserId: cc?.id ?? null,
+    },
+  });
+  await logAudit({
+    actorId: user.id,
+    action: "ATTENDANCE_POLICY_UPDATED",
+    target: `${parsed.data.absenceContactName} / cc ${cc?.name ?? "nobody"}`,
+  });
+  revalidatePath("/", "layout");
+  revalidatePath("/settings");
+  return { success: true, message: "Conflict contacts saved." };
 }

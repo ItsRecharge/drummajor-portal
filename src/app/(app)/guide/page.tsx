@@ -13,6 +13,8 @@ const TOC = [
   ["#clear", "Clearing last year's roster"],
   ["#people", "Adding and removing drum majors"],
   ["#announce", "Sending announcements"],
+  ["#events", "Events, reminders and the public calendar"],
+  ["#attendance", "Taking attendance"],
   ["#music", "Adding music"],
   ["#handoff", "Handoff notes"],
 ] as const;
@@ -193,7 +195,64 @@ export default async function GuidePage() {
         </ul>
       </Section>
 
-      <Section id="music" title="6. Adding music">
+      <Section id="events" title="6. Events, reminders and the public calendar">
+        <ol>
+          <li>
+            Add every rehearsal, performance and competition under <em>Band Events</em> and pick{" "}
+            <strong>who&apos;s expected</strong> (Jazz Band, Concert/Marching Band, or Everyone). It goes straight
+            onto the public calendar at <code>/calendar</code>, which anyone can open or subscribe to.
+          </li>
+          <li>
+            Nobody is emailed when you add an event <strong>unless it is within a week</strong>. Then the portal
+            takes over: a reminder a week out, three days out, and the morning of, each with the conflict rule.
+            On the 1st of the month (9 AM) everyone gets an overview if anything is more than a week away.
+          </li>
+          <li>
+            The conflict rule in every email: <em>attendance is mandatory and may impact your grade; if you
+            cannot make it, email the conflict contact and CC the drum major; unless it is a genuine emergency,
+            conflicts must be cleared 3 days ahead or a cut is recorded.</em> Set the contact (and their address)
+            and pick the drum major to CC in <em>Settings → Attendance policy</em>. When that drum major graduates
+            or is removed, the next leader to sign in is asked to pick a new one.
+          </li>
+          <li>
+            The emails show up under <em>Email Announcements → Sent</em> like any other message, so you can see
+            exactly what went out and who opened it.
+          </li>
+        </ol>
+      </Section>
+
+      <Section id="attendance" title="7. Taking attendance">
+        <ol>
+          <li>
+            Create the rehearsal or performance under <em>Band Events</em> (it only needs a title and
+            date), then click <strong>Attendance</strong> on its row.
+          </li>
+          <li>
+            Pick the class list at the top (Jazz Band, Concert/Marching Band, or Everyone). Everyone
+            starts as <strong>Absent</strong> — tap <strong>Present</strong>, <strong>Late</strong> or{" "}
+            <strong>Excused</strong> as you call names, or use <em>Mark all present</em> and fix the
+            exceptions. The search box jumps to a name.
+          </li>
+          <li>
+            <strong>Save attendance</strong>. You can come back and change it any time; the event row
+            shows a <em>Taken</em> badge.
+          </li>
+          <li>
+            <em>Attendance</em> in the sidebar shows season totals per student (present, late,
+            excused, absent, and a rate that ignores excused absences). Both screens have a{" "}
+            <strong>CSV</strong> button for the director.
+          </li>
+          <li>
+            Thirty minutes after you save, every student still marked <strong>Absent</strong> is emailed
+            automatically: attendance is mandatory and may affect their grade, and they get a personal link to{" "}
+            <strong>appeal</strong> if the absence was excused or recorded wrong. Appeals land at the top of the{" "}
+            <em>Attendance</em> page — <em>Excuse it</em> flips the record to Excused, <em>Deny</em> leaves it; the
+            student is emailed either way. Fixing a status on the sheet yourself also settles a pending appeal.
+          </li>
+        </ol>
+      </Section>
+
+      <Section id="music" title="8. Adding music">
         <ul>
           <li>
             <em>Library</em> → <strong>Add music</strong>. Pick the category (Concert Band, Jazz Band,
@@ -215,7 +274,7 @@ export default async function GuidePage() {
         </ul>
       </Section>
 
-      <Section id="handoff" title="7. Handoff notes">
+      <Section id="handoff" title="9. Handoff notes">
         <p>
           User menu → <em>Handoff</em>. Write what worked, what didn&apos;t, and tips for the next
           class. Do it during the year, not the week before graduation.

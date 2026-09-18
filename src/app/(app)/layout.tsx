@@ -8,6 +8,9 @@ import { isAdmin, isLeadership, canManageMusic } from "@/lib/roles";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { AppSidebar } from "@/components/app-sidebar";
 import { UserMenu } from "@/components/user-menu";
+import { CcAssignmentBanner } from "@/components/cc-assignment-banner";
+import { getAbsenceCcUser, getConflictPolicy } from "@/lib/attendance-policy";
+import { getLeadershipUsers } from "@/lib/leadership";
 import { logoutAction } from "./actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -19,11 +22,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const admin = isAdmin(user.role);
   const unread = await unreadCount(user.id);
 
+  // Until a drum major is set to be CC'd on conflicts, ask every leader who
+  // signs in — covers first setup and a CC'd person being removed or demoted.
+  const ccMissing = canInvite && !(await getAbsenceCcUser());
+  const [leaders, policy] = ccMissing ? await Promise.all([getLeadershipUsers(), getConflictPolicy()]) : [[], null];
+
   return (
     <div className="flex min-h-screen">
       <AppSidebar canInvite={canInvite} canMusic={canMusic} />
       <div className="flex min-h-full flex-1 flex-col">
         {impersonating ? <ImpersonationBanner targetName={user.name} /> : null}
+        {canInvite ? (
+          <CcAssignmentBanner
+            missing={ccMissing}
+            leaders={leaders.map((l) => ({ id: l.id, name: l.name }))}
+            contactName={policy?.contactName ?? ""}
+          />
+        ) : null}
         <header className="flex items-center justify-end gap-2 border-b border-border bg-card/60 px-4 py-2.5 pl-16 md:pl-4">
           <Link
             href="/notifications"

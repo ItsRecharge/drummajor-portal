@@ -1,6 +1,8 @@
-import { MapPin, Clock } from "lucide-react";
+import Link from "next/link";
+import { MapPin, Clock, ClipboardCheck } from "lucide-react";
 import type { Event } from "@/generated/prisma/client";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { DeleteEventButton } from "./delete-event-button";
 import { formatEventDate, formatEventTime, todayUtc } from "./event-dates";
@@ -9,9 +11,12 @@ import { formatEventDate, formatEventTime, todayUtc } from "./event-dates";
 export function EventList({
   events,
   emailedLabel,
+  showAttendance = false,
 }: {
   events: Event[];
   emailedLabel: string;
+  // Band events get a roll-call link; drum-major events don't track attendance.
+  showAttendance?: boolean;
 }) {
   const today = todayUtc();
   const upcoming = events.filter((e) => e.date >= today).sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -46,6 +51,12 @@ export function EventList({
           {e.description ? <p className="mt-1 text-sm text-muted-foreground">{e.description}</p> : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {showAttendance && e.attendanceTakenAt ? <Badge variant="secondary">Taken</Badge> : null}
+          {showAttendance ? (
+            <Link href={`/events/${e.id}/attendance`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <ClipboardCheck /> Attendance
+            </Link>
+          ) : null}
           {e.notify ? <Badge variant="outline">{emailedLabel}</Badge> : null}
           <DeleteEventButton id={e.id} title={e.title} />
         </div>

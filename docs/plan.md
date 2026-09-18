@@ -403,6 +403,29 @@ Still to verify on the music-dept server:
 - Announcement send: drum majors + admins receive a copy exactly once; music links resolve.
 - Drum-major event email carries a calendar invite; task/idea emails arrive.
 
+Attendance (2026-09-16, `feat/attendance`, spec `docs/superpowers/specs/2026-09-16-event-attendance-design.md`):
+band events get a per-event roll-call sheet (`/events/[id]/attendance`, Present/Late/Excused/Absent
+against a chosen class list, CSV export) and a season summary at `/attendance` (per-student counts,
+rate = present+late over expected−excused, CSV). New table `AttendanceRecord`; `Event` gains
+`attendanceGroupId` / `attendanceTakenAt` (migration `7_attendance`).
+
+Event communications (2026-09-17, `feat/event-comms`, spec `docs/superpowers/specs/2026-09-17-event-comms-and-appeals-design.md`):
+band events carry a "who's expected" class list; creating one emails it only when the event is within a
+week (`announceEventIfSoon`), otherwise it appears on the public calendar (`/calendar`, feed `/calendar.ics`,
+route group `(open)`). A 9 AM `America/New_York` cron (`runDailyEventJobs`) sends reminders 7 days / 3 days /
+day-of (`EventNotice` dedupes; rules in `src/lib/event-schedule.ts`) and a monthly overview on the first run
+each month (`DigestLog`). Every event email quotes the conflict policy: a free-text contact plus a portal drum major to CC
+(Settings → Attendance policy; `AppSettings.absenceContact*` + `absenceCcUserId` FK SetNull). While no CC user
+is set — first setup, or that person deleted/demoted — leaders see a banner on every page asking them to pick
+one (`CcAssignmentBanner`, `assignAbsenceCcAction`). Migration `8_event_comms`.
+
+Absence appeals (2026-09-17, `feat/event-comms`): 30 minutes after a sheet is saved, students still Absent
+are emailed once (`processAbsenceEmails`, every-minute tick; `AttendanceRecord.absenceEmailedAt/appealToken`)
+with a personal `/appeal/<token>` link. The public form creates an `AbsenceAppeal`; leadership reviews it on
+`/attendance` (Excuse it → record EXCUSED / Deny), the student is emailed the decision, and fixing a status on
+the sheet auto-approves a pending appeal. The sheet save is now a diff (create/update/delete) so re-saving
+never re-emails. Migration `9_absence_appeals`.
+
 Dev notes:
 - Build locally with a throwaway Postgres URL so build workers never open PGlite:
   `DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build`.

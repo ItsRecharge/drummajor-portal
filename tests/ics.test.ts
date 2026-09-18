@@ -216,3 +216,38 @@ test("strips carriage returns from text and escapes remaining newlines", () => {
   const out = lines(buildIcs(base({ description: "a\rb\r\nc" })));
   assert.ok(out.includes("DESCRIPTION:ab\\nc"));
 });
+
+// --- Calendar feed (many events, METHOD:PUBLISH) ---------------------------
+
+import { buildCalendarFeed } from "../src/lib/ics.ts";
+
+test("buildCalendarFeed wraps every event in one PUBLISH calendar with a name", () => {
+  const out = lines(
+    buildCalendarFeed(
+      [base({ uid: "a@x", title: "One" }), base({ uid: "b@x", title: "Two", time: "18:30" })],
+      { name: "Winchester Band", now: NOW },
+    ),
+  );
+  assert.equal(out[0], "BEGIN:VCALENDAR");
+  assert.ok(out.includes("METHOD:PUBLISH"));
+  assert.ok(out.includes("X-WR-CALNAME:Winchester Band"));
+  assert.equal(out.filter((l) => l === "BEGIN:VEVENT").length, 2);
+  assert.ok(out.includes("UID:a@x") && out.includes("UID:b@x"));
+  assert.ok(out.includes("SUMMARY:One") && out.includes("SUMMARY:Two"));
+  assert.ok(out.includes("DTSTART:20260915T183000"));
+  assert.equal(out[out.length - 1], "END:VCALENDAR");
+  assert.ok(!out.includes("METHOD:REQUEST"));
+});
+
+test("buildCalendarFeed with no events is still a valid empty calendar", () => {
+  const out = lines(buildCalendarFeed([], { name: "Band; Events", now: NOW }));
+  assert.deepEqual(out, [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Drum Major Portal//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "X-WR-CALNAME:Band\\; Events",
+    "END:VCALENDAR",
+  ]);
+});
