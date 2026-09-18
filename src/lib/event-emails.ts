@@ -1,6 +1,6 @@
 // Email templates for band events: created-within-a-week, the three reminders,
 // and the monthly overview. Pure (built on email-layout) so they're testable.
-import { button, escapeText, headingHtml, meta, note, shell } from "./email-layout.ts";
+import { BRAND, button, escapeText, headingHtml, meta, note, shell } from "./email-layout.ts";
 import type { ReminderKind } from "./event-schedule.ts";
 
 // Who a student must email about a conflict. The contact always renders; the
@@ -45,8 +45,9 @@ export function conflictMailto(policy: ConflictPolicy, eventTitle: string): stri
 
 function person(name: string, email: string | null | undefined, href: string | null): string {
   const label = escapeText(name);
-  if (href) return `<a href="${href}" style="font-weight:600">${label}</a>`;
-  if (email) return `<a href="mailto:${escapeText(email)}" style="font-weight:600">${label}</a>`;
+  const style = `font-weight:600;color:${BRAND.red}`;
+  if (href) return `<a href="${href}" style="${style}">${label}</a>`;
+  if (email) return `<a href="mailto:${escapeText(email)}" style="${style}">${label}</a>`;
   return `<strong>${label}</strong>`;
 }
 
