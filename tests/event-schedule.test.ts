@@ -7,7 +7,7 @@ import {
   dueReminder,
   monthKey,
   digestSelection,
-  shouldAnnounceOnCreate,
+  creationNotice,
 } from "../src/lib/event-schedule.ts";
 
 const TZ = "America/New_York";
@@ -58,11 +58,11 @@ test("dueReminder: one send per day, most urgent kind, records everything it cov
   assert.equal(dueReminder(-1, []), null);
 });
 
-test("shouldAnnounceOnCreate: only events happening within the next 7 days (today included)", () => {
-  assert.equal(shouldAnnounceOnCreate(0), true);
-  assert.equal(shouldAnnounceOnCreate(7), true);
-  assert.equal(shouldAnnounceOnCreate(8), false);
-  assert.equal(shouldAnnounceOnCreate(-1), false);
+test("creationNotice: an event added for today gets the day-of email at once; any other date waits for the daily job", () => {
+  assert.deepEqual(creationNotice(0), { send: "DAY_OF", record: ["WEEK_BEFORE", "THREE_DAYS_BEFORE", "DAY_OF"] });
+  assert.equal(creationNotice(1), null);
+  assert.equal(creationNotice(7), null);
+  assert.equal(creationNotice(-1), null);
 });
 
 test("monthKey uses the zone's month", () => {

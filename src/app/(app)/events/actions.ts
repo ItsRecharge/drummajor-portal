@@ -8,11 +8,11 @@ import { requireRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { parseForm, type ActionState } from "@/lib/form";
 import { eventSchema } from "@/lib/validation";
-import { notifyUsers } from "@/lib/notify";
+import { notifyAll, notifyUsers } from "@/lib/notify";
 import { appBaseUrl, dmEventEmail } from "@/lib/email";
 import { buildIcs } from "@/lib/ics";
 import { emailLeadership, getBandName, getLeadershipUsers } from "@/lib/leadership";
-import { announceEventIfSoon } from "@/lib/event-comms";
+import { announceIfToday } from "@/lib/event-comms";
 import { Role, EventAudience, type Event } from "@/generated/prisma/client";
 import { eventLocalDate, formatEventWhen } from "./event-dates";
 
@@ -76,7 +76,9 @@ export async function createEventAction(_prev: ActionState, formData: FormData):
       date: parsed.data.date,
       time: parsed.data.time || null,
       audience,
-      // DM events always notify; band events only when within a week (set below).
+      // DM events are invited at once. Band events are never emailed on creation
+      // (the daily job sends the reminders); their "Emailed" badge comes from
+      // EventNotice rows, not this flag.
       notify: audience === EventAudience.DRUM_MAJORS,
       attendanceGroupId,
       createdById: actor.id,
@@ -84,8 +86,12 @@ export async function createEventAction(_prev: ActionState, formData: FormData):
   });
   await logAudit({ actorId: actor.id, action: "EVENT_CREATED", target: event.title, metadata: { audience } });
 
-  if (audience === EventAudience.DRUM_MAJORS) await inviteDrumMajors(actor, event);
-  else await announceEventIfSoon(event);
+  if (audience === EventAudience.DRUM_MAJORS) {
+    await inviteDrumMajors(actor, event);
+  } else {
+    await notifyAll("EVENT", { title: event.title, when: formatEventWhen(event.date, event.time) }, actor.id);
+    await announceIfToday(event);
+  }
 
   revalidatePath("/events");
   revalidatePath("/dm-events");

@@ -203,9 +203,10 @@ export default async function GuidePage() {
             onto the public calendar at <code>/calendar</code>, which anyone can open or subscribe to.
           </li>
           <li>
-            Nobody is emailed when you add an event <strong>unless it is within a week</strong>. Then the portal
-            takes over: a reminder a week out, three days out, and the morning of, each with the conflict rule.
-            On the 1st of the month (9 AM) everyone gets an overview if anything is more than a week away.
+            Adding an event <strong>sends nothing by itself</strong>. The portal takes over: a reminder a week
+            out, three days out, and the morning of, each with the conflict rule (an event added for today gets
+            its day-of email right away). On the 1st of the month (9 AM) everyone gets an overview if anything
+            is more than a week away.
           </li>
           <li>
             The conflict rule in every email: <em>attendance is mandatory and may impact your grade; if you

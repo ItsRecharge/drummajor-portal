@@ -4,7 +4,9 @@
 #
 # Invoked by drummajor-portal.service as ExecStart. On every (re)start it:
 #   1. Fetches the remote and checks whether the local branch is behind.
-#   2. If behind: pulls, installs deps, applies DB migrations, rebuilds.
+#   2. If behind, or if HEAD is not the commit the last build was made from
+#      (someone ran `git pull` by hand): pulls, installs deps, applies DB
+#      migrations, rebuilds.
 #   3. Execs `next start` (replaces this shell so systemd tracks the node PID).
 #
 # Safe to run by hand too:  ./deploy/update-and-run.sh
@@ -38,6 +40,16 @@ if [ ! -x node_modules/.bin/next ] || [ ! -f .next/BUILD_ID ]; then
   needs_build=1
 fi
 
+# A manual `git pull` moves HEAD without rebuilding, and the fetch check above
+# then sees nothing new. .next/BUILD_COMMIT records which commit the last
+# successful build (and migration run) came from; rebuild whenever it differs.
+HEAD_NOW="$(git rev-parse HEAD)"
+BUILT="$(cat .next/BUILD_COMMIT 2>/dev/null || true)"
+if [ "$needs_build" -eq 0 ] && [ "$BUILT" != "$HEAD_NOW" ]; then
+  echo "[update] build is from ${BUILT:-an unknown commit}, HEAD is $HEAD_NOW; rebuilding ..."
+  needs_build=1
+fi
+
 if [ "$needs_build" -eq 1 ]; then
   echo "[update] installing dependencies ..."
   # --include=dev: portal.env sets NODE_ENV=production, which would otherwise make
@@ -55,6 +67,7 @@ if [ "$needs_build" -eq 1 ]; then
 
   echo "[update] building ..."
   npm run build
+  git rev-parse HEAD > .next/BUILD_COMMIT
 else
   echo "[update] already up to date ($LOCAL) and built; skipping rebuild."
 fi

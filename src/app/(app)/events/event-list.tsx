@@ -7,13 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { DeleteEventButton } from "./delete-event-button";
 import { formatEventDate, formatEventTime, todayUtc } from "./event-dates";
 
+// Band events carry their sent-email log (EventNotice rows); drum-major events
+// are invited on creation and flag that with `notify` instead.
+type ListedEvent = Event & { notices?: { id: string }[] };
+
 // Upcoming first (soonest at the top), past events tucked into a disclosure.
 export function EventList({
   events,
   emailedLabel,
   showAttendance = false,
 }: {
-  events: Event[];
+  events: ListedEvent[];
   emailedLabel: string;
   // Band events get a roll-call link; drum-major events don't track attendance.
   showAttendance?: boolean;
@@ -22,7 +26,7 @@ export function EventList({
   const upcoming = events.filter((e) => e.date >= today).sort((a, b) => a.date.getTime() - b.date.getTime());
   const past = events.filter((e) => e.date < today).sort((a, b) => b.date.getTime() - a.date.getTime());
 
-  const row = (e: Event) => (
+  const row = (e: ListedEvent) => (
     <Card key={e.id}>
       <CardContent className="flex items-center gap-4 py-3">
         <div className="grid w-14 shrink-0 place-items-center rounded-md border bg-muted/40 py-1.5 leading-none">
@@ -57,7 +61,7 @@ export function EventList({
               <ClipboardCheck /> Attendance
             </Link>
           ) : null}
-          {e.notify ? <Badge variant="outline">{emailedLabel}</Badge> : null}
+          {e.notify || (e.notices?.length ?? 0) > 0 ? <Badge variant="outline">{emailedLabel}</Badge> : null}
           <DeleteEventButton id={e.id} title={e.title} />
         </div>
       </CardContent>

@@ -1,5 +1,5 @@
-// Email templates for band events: created-within-a-week, the three reminders,
-// and the monthly overview. Pure (built on email-layout) so they're testable.
+// Email templates for band events: the three reminders and the monthly
+// overview. Pure (built on email-layout) so they're testable.
 import { BRAND, button, escapeText, headingHtml, meta, note, shell } from "./email-layout.ts";
 import type { ReminderKind } from "./event-schedule.ts";
 
@@ -72,15 +72,6 @@ function details(input: EventEmailInput): string {
 
 function calendarButton(url: string): string {
   return button(url, "See the full calendar");
-}
-
-export function eventCreatedEmail(input: EventEmailInput): EventMail {
-  return compose(
-    `New band event: ${input.title} — ${input.when}`,
-    "New band event",
-    `<p>A band event has been added for this week.</p>${details(input)}${conflictPolicyHtml(input.policy, input.title)}${calendarButton(input.calendarUrl)}`,
-    input.bandName,
-  );
 }
 
 const REMINDER_COPY: Record<ReminderKind, { prefix: string; heading: string; lead: string }> = {

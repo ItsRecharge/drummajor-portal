@@ -14,7 +14,11 @@ export const metadata = { title: "Band Events — Drum Major Portal" };
 export default async function EventsPage() {
   await requireRole(Role.ADMIN, Role.DRUM_MAJOR);
   const [events, groups] = await Promise.all([
-    prisma.event.findMany({ where: { audience: EventAudience.BAND }, orderBy: { date: "asc" } }),
+    prisma.event.findMany({
+      where: { audience: EventAudience.BAND },
+      orderBy: { date: "asc" },
+      include: { notices: { select: { id: true } } },
+    }),
     getAttendanceGroups(),
   ]);
 

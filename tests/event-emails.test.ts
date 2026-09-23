@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import {
   conflictPolicyHtml,
   conflictMailto,
-  eventCreatedEmail,
   eventReminderEmail,
   monthlyDigestEmail,
   type ConflictPolicy,
@@ -56,9 +55,9 @@ test("conflictPolicyHtml carries the policy text and links names when emails are
   assert.ok(!noCc.includes("CC"));
 });
 
-test("eventCreatedEmail: subject, escaped title, details, policy, calendar link", () => {
-  const { subject, html } = eventCreatedEmail(base);
-  assert.equal(subject, "New band event: Fall Rehearsal <#2> — Sat, Oct 3 at 6:00 PM");
+test("eventReminderEmail: escaped title, details, policy, calendar link, band name", () => {
+  const { subject, html } = eventReminderEmail("WEEK_BEFORE", base);
+  assert.equal(subject, "One week out: Fall Rehearsal <#2> — Sat, Oct 3 at 6:00 PM");
   assert.ok(html.includes("Fall Rehearsal &lt;#2&gt;"));
   assert.ok(!html.includes("<#2>"));
   assert.ok(html.includes("Stadium") && html.includes("Full uniform"));

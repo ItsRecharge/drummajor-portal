@@ -4,7 +4,6 @@
 // Leadership is cc'd automatically by the announcement queue.
 import { prisma } from "@/lib/prisma";
 import { enqueueAnnouncement } from "@/lib/announce";
-import { notifyAll } from "@/lib/notify";
 import { appBaseUrl } from "@/lib/email";
 import { getBandName } from "@/lib/leadership";
 import { ensureBuiltInGroups, EVERYONE } from "@/lib/groups";
@@ -12,21 +11,16 @@ import { EventAudience, Role, type Event, type EventNoticeKind } from "@/generat
 import {
   DEFAULT_TZ,
   calendarDayInZone,
-  coveredKinds,
+  creationNotice,
   daysUntil,
   digestSelection,
   dueReminder,
   monthKey,
-  shouldAnnounceOnCreate,
   todayUtcInZone,
   type NoticeKind,
+  type ReminderKind,
 } from "@/lib/event-schedule";
-import {
-  eventCreatedEmail,
-  eventReminderEmail,
-  monthlyDigestEmail,
-  type EventMail,
-} from "@/lib/event-emails";
+import { eventReminderEmail, monthlyDigestEmail, type EventMail } from "@/lib/event-emails";
 import { formatEventWhen } from "@/app/(app)/events/event-dates";
 import { getConflictPolicy } from "@/lib/attendance-policy";
 
@@ -79,14 +73,14 @@ async function eventMailInput(event: Event) {
 // notice kind it covers (so later reminders know they're done).
 export async function sendEventEmail(
   event: Event,
-  notice: { send: NoticeKind; record: NoticeKind[] },
+  notice: { send: ReminderKind; record: ReminderKind[] },
 ): Promise<string | null> {
   const authorId = event.createdById ?? (await fallbackAuthorId());
   const groupId = event.attendanceGroupId ?? (await everyoneGroupId());
   if (!authorId || !groupId) return null;
 
   const input = await eventMailInput(event);
-  const mail = notice.send === "ANNOUNCED" ? eventCreatedEmail(input) : eventReminderEmail(notice.send, input);
+  const mail = eventReminderEmail(notice.send, input);
   const announcementId = await queueAnnouncement(mail, authorId, groupId);
   await prisma.eventNotice.createMany({
     data: notice.record.map((kind) => ({
@@ -99,16 +93,13 @@ export async function sendEventEmail(
   return announcementId;
 }
 
-// On creation: email the class list now only if the event is within a week.
-// That email stands in for any reminder that would already have gone out.
-export async function announceEventIfSoon(event: Event, now = new Date()): Promise<boolean> {
-  const days = daysUntil(event.date, now);
-  if (!shouldAnnounceOnCreate(days)) return false;
-  const id = await sendEventEmail(event, { send: "ANNOUNCED", record: ["ANNOUNCED", ...coveredKinds(days)] });
-  if (!id) return false;
-  await prisma.event.update({ where: { id: event.id }, data: { notify: true } });
-  await notifyAll("EVENT", { title: event.title, when: formatEventWhen(event.date, event.time) }, event.createdById ?? undefined);
-  return true;
+// On creation nothing is emailed; the daily job sends the reminders. An event
+// added for today is the exception: the 9 AM run may already be past, so its
+// class list gets the day-of email at once.
+export async function announceIfToday(event: Event, now = new Date()): Promise<boolean> {
+  const notice = creationNotice(daysUntil(event.date, now));
+  if (!notice) return false;
+  return (await sendEventEmail(event, notice)) !== null;
 }
 
 // Reminders for every band event in the next week. At most one email per

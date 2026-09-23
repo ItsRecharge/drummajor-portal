@@ -7,6 +7,8 @@
 export const DEFAULT_TZ = "America/New_York";
 
 export type ReminderKind = "WEEK_BEFORE" | "THREE_DAYS_BEFORE" | "DAY_OF";
+// ANNOUNCED is legacy: the creation email sent before 2026-09-23. Existing
+// EventNotice rows still hold it; dueReminder ignores it.
 export type NoticeKind = "ANNOUNCED" | ReminderKind;
 
 // Days before the event each reminder goes out. Order = most distant first.
@@ -16,9 +18,6 @@ export const REMINDER_THRESHOLDS: Record<ReminderKind, number> = {
   DAY_OF: 0,
 };
 export const REMINDER_KINDS: readonly ReminderKind[] = ["WEEK_BEFORE", "THREE_DAYS_BEFORE", "DAY_OF"];
-
-// A newly created event is emailed at once only if it's this close.
-export const ANNOUNCE_WINDOW_DAYS = 7;
 
 const DAY_MS = 86_400_000;
 
@@ -44,10 +43,6 @@ export function daysUntil(eventDate: Date, now: Date, tz = DEFAULT_TZ): number {
   return Math.round((event - todayUtcInZone(now, tz).getTime()) / DAY_MS);
 }
 
-export function shouldAnnounceOnCreate(days: number): boolean {
-  return days >= 0 && days <= ANNOUNCE_WINDOW_DAYS;
-}
-
 // An email sent `days` before the event stands in for every reminder that
 // would have gone out at or before that point.
 export function coveredKinds(days: number): ReminderKind[] {
@@ -69,6 +64,13 @@ export function dueReminder(
   return { send: outstanding[outstanding.length - 1], record: outstanding };
 }
 
+// Nothing is emailed when an event is added; the daily job sends the reminders.
+// The one exception is an event added for today: the 9 AM run may already be
+// past, so it gets the day-of email at once (which covers every reminder).
+export function creationNotice(days: number): { send: ReminderKind; record: ReminderKind[] } | null {
+  return days === 0 ? dueReminder(0, []) : null;
+}
+
 export function monthKey(now: Date, tz = DEFAULT_TZ): string {
   const { year, month } = calendarDayInZone(now, tz);
   return `${year}-${String(month + 1).padStart(2, "0")}`;
@@ -86,6 +88,6 @@ export function digestSelection<T extends { date: Date }>(
   const remaining = events
     .filter((e) => e.date.getUTCFullYear() === year && e.date.getUTCMonth() === month && daysUntil(e.date, now, tz) >= 0)
     .sort((a, b) => a.date.getTime() - b.date.getTime());
-  const shouldSend = remaining.some((e) => daysUntil(e.date, now, tz) > ANNOUNCE_WINDOW_DAYS);
+  const shouldSend = remaining.some((e) => daysUntil(e.date, now, tz) > REMINDER_THRESHOLDS.WEEK_BEFORE);
   return { events: remaining, shouldSend };
 }

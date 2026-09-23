@@ -40,5 +40,9 @@ export function startScheduler(): void {
     },
     { timezone: DEFAULT_TZ },
   );
+  // Also run once at boot. The cron only fires at 9 AM, so an event added for
+  // today after that, or a deploy after 9 AM, would otherwise never get its
+  // email. EventNotice + DigestLog dedupe make this a no-op when nothing is due.
+  runDailyEventJobs().catch((err) => console.error("[scheduler] boot event jobs failed:", err));
   console.log("[scheduler] announcement queue + library sync + daily event email workers started");
 }

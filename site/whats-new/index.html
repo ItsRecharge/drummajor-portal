@@ -118,7 +118,7 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
       <div class="feature-copy">
         <ul class="rules">
           <li><strong>Who's expected:</strong> each band event names a class list (Jazz Band, Concert/Marching Band or Everyone). That decides who gets the emails and pre-fills the attendance sheet.</li>
-          <li><strong>Adding an event</strong> only sends an email if the event is within a week. Anything further out just goes on the calendar.</li>
+          <li><strong>Adding an event</strong> sends nothing by itself; it goes on the calendar and the reminders do the emailing.</li>
           <li><strong>Reminders</strong> go out at 9 AM one week before, three days before, and the morning of.</li>
           <li><strong>Monthly overview:</strong> on the 1st, everyone gets a list of that month's events (only if something is more than a week away).</li>
           <li><strong>Everything that goes out</strong> is listed under <em>Email Announcements → Sent</em>, with open counts.</li>
@@ -204,21 +204,6 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
       <div class="doc-block">
         <h3>Event emails</h3>
         <details class="mail" open>
-  <summary><span><strong>New band event</strong><span class="mail-sub">New band event: Homecoming Halftime Show — Fri, Oct 16 at 6:30 PM</span></span></summary>
-  <div class="body">
-    <p class="mail-meta"><span class="k">To</span>The event&#x27;s class list (Jazz Band, Concert/Marching Band or Everyone) + drum majors and admins<br><span class="k">Sent</span>The moment a band event is added with a date within the next 7 days. Events further out get no email — they go on the public calendar.</p>
-    <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
-  <div style="max-width:600px;margin:0 auto">
-    <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
-    <div style="background:#fff;border:1px solid #e8e3dc;border-top:none;border-radius:0 0 8px 8px;padding:24px;font-size:15px;line-height:1.55">
-      <h2 style="margin:0 0 14px;font-size:20px;color:#1f1d1c">New band event</h2><p>A band event has been added for this week.</p><table role="presentation" style="border-collapse:collapse;margin:8px 0 12px"><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">What</td><td style="padding:4px 0;font-size:14px">Homecoming Halftime Show</td></tr><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">When</td><td style="padding:4px 0;font-size:14px">Fri, Oct 16 at 6:30 PM</td></tr><tr><td style="padding:4px 12px 4px 0;color:#6b6560;font-size:13px;white-space:nowrap;vertical-align:top">Where</td><td style="padding:4px 0;font-size:14px">Knowlton Stadium</td></tr></table><p style="white-space:pre-wrap">Full uniform. Call time is 5:45 in the band room — bring your flip folder and a water bottle.</p><p style="margin:16px 0 0;padding:12px 14px;background:#faf8f5;border-left:3px solid #b3122b;border-radius:0 6px 6px 0;font-size:14px"><strong>Attendance is mandatory</strong> and may impact your grade. If you cannot make it, email <a href="mailto:costello@winchesterps.org?cc=jkillian%40wpsstudent.com&subject=Conflict%3A%20Homecoming%20Halftime%20Show" style="font-weight:600;color:#b3122b">Mr. Costello</a> and CC <a href="mailto:jkillian@wpsstudent.com" style="font-weight:600;color:#b3122b">Jake Killian</a>. Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut will be recorded.</p><p style="margin:18px 0 6px"><a href="https://portal.example.org/calendar" style="display:inline-block;background:#b3122b;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600">See the full calendar</a></p>
-    <p style="font-size:12px;color:#6b6560;margin:0">Or paste this link: https://portal.example.org/calendar</p>
-    </div>
-    <p style="font-size:12px;color:#6b6560;margin:14px 4px 0">Sent via the Drum Major Portal</p>
-  </div>
-</div></div>
-  </div>
-</details><details class="mail">
   <summary><span><strong>One week out</strong><span class="mail-sub">One week out: Homecoming Halftime Show — Fri, Oct 16 at 6:30 PM</span></span></summary>
   <div class="body">
     <p class="mail-meta"><span class="k">To</span>The event&#x27;s class list + leadership<br><span class="k">Sent</span>9:00 AM Eastern, 7 days before the event.</p>

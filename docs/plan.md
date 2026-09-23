@@ -410,9 +410,10 @@ rate = present+late over expected−excused, CSV). New table `AttendanceRecord`;
 `attendanceGroupId` / `attendanceTakenAt` (migration `7_attendance`).
 
 Event communications (2026-09-17, `feat/event-comms`, spec `docs/superpowers/specs/2026-09-17-event-comms-and-appeals-design.md`):
-band events carry a "who's expected" class list; creating one emails it only when the event is within a
-week (`announceEventIfSoon`), otherwise it appears on the public calendar (`/calendar`, feed `/calendar.ics`,
-route group `(open)`). A 9 AM `America/New_York` cron (`runDailyEventJobs`) sends reminders 7 days / 3 days /
+band events carry a "who's expected" class list; creating one sends no email (since 2026-09-23, spec
+`2026-09-23-no-creation-email-design.md`; an event added for today gets its day-of email at once via
+`announceIfToday`). It appears on the public calendar (`/calendar`, feed `/calendar.ics`, route group `(open)`).
+A 9 AM `America/New_York` cron (`runDailyEventJobs`, also run once at boot) sends reminders 7 days / 3 days /
 day-of (`EventNotice` dedupes; rules in `src/lib/event-schedule.ts`) and a monthly overview on the first run
 each month (`DigestLog`). Every event email quotes the conflict policy: a free-text contact plus a portal drum major to CC
 (Settings → Attendance policy; `AppSettings.absenceContact*` + `absenceCcUserId` FK SetNull). While no CC user

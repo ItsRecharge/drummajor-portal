@@ -53,9 +53,9 @@ export function EventForm({
             </select>
           </div>
           <p className="text-sm text-muted-foreground">
-            That class list is emailed right away only if the event is within a week. Otherwise it goes on
-            the public calendar and into the monthly overview, and everyone gets a reminder a week out,
-            three days out, and the morning of.
+            Nothing is emailed when you add it. It goes on the public calendar and into the monthly overview,
+            and that class list gets a reminder a week out, three days out, and the morning of. If the event
+            is today, the day-of email goes out right away.
           </p>
         </>
       )}
