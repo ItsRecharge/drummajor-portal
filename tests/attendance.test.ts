@@ -4,7 +4,8 @@ import {
   ATTENDANCE_STATUSES,
   ATTENDANCE_LABELS,
   isAttendanceStatus,
-  parseAttendanceForm,
+  buildSheetRows,
+  applyPending,
   countStatuses,
   summarizeAttendance,
   attendanceRate,
@@ -22,22 +23,38 @@ test("statuses: four values in UI order with labels", () => {
   assert.ok(!isAttendanceStatus(null));
 });
 
-test("parseAttendanceForm: reads status:<id>, defaults missing/invalid to ABSENT, ignores strangers", () => {
-  const fd = new FormData();
-  fd.set("status:a", "PRESENT");
-  fd.set("status:b", "LATE");
-  fd.set("status:c", "bogus");
-  fd.set("status:z", "PRESENT"); // not expected → dropped
-  const m = parseAttendanceForm(fd, ["a", "b", "c", "d"]);
-  assert.deepEqual(
-    [...m],
+test("buildSheetRows: roster order, missing record → Absent, record-only students kept, emailedAt passed through", () => {
+  const rows = buildSheetRows(
     [
-      ["a", "PRESENT"],
-      ["b", "LATE"],
-      ["c", "ABSENT"],
-      ["d", "ABSENT"],
+      { id: "b", name: "Bo Li", instrument: "Tuba" },
+      { id: "a", name: "Ann Lee", instrument: null },
+    ],
+    [
+      { contactId: "b", status: "LATE", absenceEmailedAt: null, contact: { name: "Bo Li", instrument: "Tuba" } },
+      { contactId: "z", status: "ABSENT", absenceEmailedAt: "2026-09-23T20:00:00.000Z", contact: { name: "Zed Q", instrument: "Drums" } },
     ],
   );
+  assert.deepEqual(rows, [
+    { id: "a", name: "Ann Lee", instrument: "", status: "ABSENT", emailedAt: null },
+    { id: "b", name: "Bo Li", instrument: "Tuba", status: "LATE", emailedAt: null },
+    { id: "z", name: "Zed Q", instrument: "Drums", status: "ABSENT", emailedAt: "2026-09-23T20:00:00.000Z" },
+  ]);
+});
+
+test("applyPending overrides only the listed students", () => {
+  const rows = [
+    { id: "a", name: "Ann", instrument: "", status: "ABSENT" as const, emailedAt: null },
+    { id: "b", name: "Bo", instrument: "", status: "ABSENT" as const, emailedAt: null },
+  ];
+  const out = applyPending(rows, new Map([["b", "PRESENT" as const]]));
+  assert.deepEqual(
+    out.map((r) => [r.id, r.status]),
+    [
+      ["a", "ABSENT"],
+      ["b", "PRESENT"],
+    ],
+  );
+  assert.equal(out[0], rows[0]); // untouched rows keep identity
 });
 
 test("countStatuses tallies each status", () => {

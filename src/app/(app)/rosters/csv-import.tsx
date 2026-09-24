@@ -69,7 +69,8 @@ export function CsvImport() {
       <p className="text-sm text-muted-foreground">
         Paste CSV or upload a <code>.csv</code> file with columns{" "}
         <code>Name,Email,Instrument,Grade,Group</code>. Instrument, Grade, and Group are
-        optional; group names must already exist.
+        optional; group names must already exist (the built-in ones are Jazz Band,
+        Concert/Marching Band and Concert/Jazz Band Only).
       </p>
       <input type="file" accept=".csv,text/csv" onChange={onFile} className="text-sm" />
       <Textarea

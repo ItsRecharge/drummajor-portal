@@ -1,23 +1,21 @@
+// Prisma side of groups. Names and pure rules live in ./group-names.ts.
 import { prisma } from "@/lib/prisma";
 import type { Group } from "@/generated/prisma/client";
+import { BUILTIN_GROUPS, isEveryone } from "@/lib/group-names";
 
-// The built-in "Everyone" group is virtual: it always resolves to every contact
-// and never stores ContactGroup rows. It exists as a real Group row only so it can
-// be targeted by announcements. It cannot be edited or emptied.
-export const EVERYONE = "Everyone";
-// The two class rosters, imported from Google Classroom. A student can be in both.
-export const JAZZ_GROUP = "Jazz Band";
-export const CONCERT_MARCHING_GROUP = "Concert/Marching Band";
+export {
+  EVERYONE,
+  JAZZ_GROUP,
+  CONCERT_MARCHING_GROUP,
+  CONCERT_JAZZ_ONLY_GROUP,
+  BUILTIN_GROUPS,
+  isEveryone,
+  normalizeGroupSelection,
+} from "@/lib/group-names";
 
-// Built-in groups are seeded on first roster-page load and cannot be deleted.
-export const BUILTIN_GROUPS = [EVERYONE, JAZZ_GROUP, CONCERT_MARCHING_GROUP] as const;
-
-export function isEveryone(group: { name: string }): boolean {
-  return group.name === EVERYONE;
-}
-
-// Idempotently ensure the built-in groups exist. Called from the roster page so we
-// avoid a data migration; upsert keyed on the unique name keeps it safe to re-run.
+// Idempotently ensure the built-in groups exist. Called from the pages that
+// need them so we avoid a data migration; upsert keyed on the unique name keeps
+// it safe to re-run.
 export async function ensureBuiltInGroups(): Promise<void> {
   await Promise.all(
     BUILTIN_GROUPS.map((name) =>

@@ -407,10 +407,11 @@ Attendance (2026-09-16, `feat/attendance`, spec `docs/superpowers/specs/2026-09-
 band events get a per-event roll-call sheet (`/events/[id]/attendance`, Present/Late/Excused/Absent
 against a chosen class list, CSV export) and a season summary at `/attendance` (per-student counts,
 rate = present+late over expected−excused, CSV). New table `AttendanceRecord`; `Event` gains
-`attendanceGroupId` / `attendanceTakenAt` (migration `7_attendance`).
+`attendanceGroupId` / `attendanceTakenAt` (migration `7_attendance`; `attendanceGroupId` replaced by
+`EventGroup` on 2026-09-23, below).
 
 Event communications (2026-09-17, `feat/event-comms`, spec `docs/superpowers/specs/2026-09-17-event-comms-and-appeals-design.md`):
-band events carry a "who's expected" class list; creating one sends no email (since 2026-09-23, spec
+band events carry a "who's expected" class list (one or more since 2026-09-23, below); creating one sends no email (since 2026-09-23, spec
 `2026-09-23-no-creation-email-design.md`; an event added for today gets its day-of email at once via
 `announceIfToday`). It appears on the public calendar (`/calendar`, feed `/calendar.ics`, route group `(open)`).
 A 9 AM `America/New_York` cron (`runDailyEventJobs`, also run once at boot) sends reminders 7 days / 3 days /
@@ -420,12 +421,24 @@ each month (`DigestLog`). Every event email quotes the conflict policy: a free-t
 is set — first setup, or that person deleted/demoted — leaders see a banner on every page asking them to pick
 one (`CcAssignmentBanner`, `assignAbsenceCcAction`). Migration `8_event_comms`.
 
-Absence appeals (2026-09-17, `feat/event-comms`): 30 minutes after a sheet is saved, students still Absent
-are emailed once (`processAbsenceEmails`, every-minute tick; `AttendanceRecord.absenceEmailedAt/appealToken`)
-with a personal `/appeal/<token>` link. The public form creates an `AbsenceAppeal`; leadership reviews it on
+Absence appeals (2026-09-17, `feat/event-comms`): students marked Absent are emailed once (originally on a
+30-minute grace timer after save; since 2026-09-23 on publish, below — `processAbsenceEmails`, every-minute tick;
+`AttendanceRecord.absenceEmailedAt/appealToken`) with a personal `/appeal/<token>` link. The public form creates an `AbsenceAppeal`; leadership reviews it on
 `/attendance` (Excuse it → record EXCUSED / Deny), the student is emailed the decision, and fixing a status on
 the sheet auto-approves a pending appeal. The sheet save is now a diff (create/update/delete) so re-saving
 never re-emails. Migration `9_absence_appeals`.
+
+Live attendance and event groups (2026-09-23, `feat/live-attendance`, spec
+`docs/superpowers/specs/2026-09-23-live-attendance-and-event-groups-design.md`): `Event.attendanceGroupId` is
+replaced by an `EventGroup` join table so an event expects one or more class lists ("Who's expected" chips on the
+new-event form; Everyone stands alone). `/events/[id]/edit` edits title/date/time/location/details/lists, and a
+date change resets the reminders. Reminders and the sheet roster are the union of the event's lists, deduped.
+The sheet has no list picker or Save button: it autosaves per tap and syncs live between drum majors over SSE
+(`/events/[id]/attendance/live`, presence as "Also here"); "Mark all absent" confirms first. `Event.attendancePublishedAt/ById`
+replace the 30-minute grace period: Publish fills unmarked students in as Absent and sends the absence emails
+at once, later Absent marks on a published sheet go out on the every-minute tick, an unpublished sheet never
+emails, and `/attendance` totals count published sheets only. Event badges are In progress / Published. New
+built-in class list "Concert/Jazz Band Only" (`CONCERT_JAZZ_ONLY_GROUP`). Migration `9a_event_groups_publish`.
 
 Dev notes:
 - Build locally with a throwaway Postgres URL so build workers never open PGlite:

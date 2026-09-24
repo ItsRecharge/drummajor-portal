@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Clock, ClipboardCheck } from "lucide-react";
+import { MapPin, Clock, ClipboardCheck, Pencil, Users } from "lucide-react";
 import type { Event } from "@/generated/prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { DeleteEventButton } from "./delete-event-button";
 import { formatEventDate, formatEventTime, todayUtc } from "./event-dates";
 
-// Band events carry their sent-email log (EventNotice rows); drum-major events
-// are invited on creation and flag that with `notify` instead.
-type ListedEvent = Event & { notices?: { id: string }[] };
+// Band events carry their sent-email log (EventNotice rows) and their expected
+// class lists; drum-major events are invited on creation and flag that with
+// `notify` instead.
+type ListedEvent = Event & { notices?: { id: string }[]; groups?: { group: { name: string } }[] };
 
 // Upcoming first (soonest at the top), past events tucked into a disclosure.
 export function EventList({
@@ -51,14 +52,33 @@ export function EventList({
                 {e.location}
               </span>
             ) : null}
+            {e.groups?.length ? (
+              <span className="inline-flex items-center gap-1">
+                <Users className="size-3" />
+                {e.groups.map((g) => g.group.name).join(" · ")}
+              </span>
+            ) : null}
           </p>
           {e.description ? <p className="mt-1 text-sm text-muted-foreground">{e.description}</p> : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {showAttendance && e.attendanceTakenAt ? <Badge variant="secondary">Taken</Badge> : null}
+          {showAttendance && e.attendancePublishedAt ? (
+            <Badge variant="secondary">Published</Badge>
+          ) : showAttendance && e.attendanceTakenAt ? (
+            <Badge variant="outline">In progress</Badge>
+          ) : null}
           {showAttendance ? (
             <Link href={`/events/${e.id}/attendance`} className={buttonVariants({ variant: "outline", size: "sm" })}>
               <ClipboardCheck /> Attendance
+            </Link>
+          ) : null}
+          {showAttendance ? (
+            <Link
+              href={`/events/${e.id}/edit`}
+              aria-label={`Edit ${e.title}`}
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              <Pencil />
             </Link>
           ) : null}
           {e.notify || (e.notices?.length ?? 0) > 0 ? <Badge variant="outline">{emailedLabel}</Badge> : null}

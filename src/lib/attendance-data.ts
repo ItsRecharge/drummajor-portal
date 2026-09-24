@@ -1,18 +1,29 @@
-// Prisma-facing helpers for attendance. Pure logic lives in ./attendance.ts.
+// Prisma-facing helpers for attendance. Pure logic lives in ./attendance.ts and
+// the live pub/sub in ./attendance-live.ts.
 import { prisma } from "@/lib/prisma";
 import { BUILTIN_GROUPS, ensureBuiltInGroups, EVERYONE, isEveryone } from "@/lib/groups";
-import { summarizeAttendance, type AttendanceStatus, type SummaryCsvRow } from "@/lib/attendance";
+import {
+  buildSheetRows,
+  summarizeAttendance,
+  type AttendanceStatus,
+  type SheetSnapshot,
+  type SummaryCsvRow,
+} from "@/lib/attendance";
+import { broadcastFrame, sseFrame } from "@/lib/attendance-live";
 import type { Contact, Group } from "@/generated/prisma/client";
 
-// The three built-in class lists, in the order the picker shows them.
-export async function getAttendanceGroups(): Promise<Group[]> {
-  await ensureBuiltInGroups();
-  const groups = await prisma.group.findMany({ where: { builtIn: true } });
+function builtInOrder(groups: Group[]): Group[] {
   const order = new Map<string, number>(BUILTIN_GROUPS.map((n, i) => [n, i]));
   return groups.sort((a, b) => (order.get(a.name) ?? 99) - (order.get(b.name) ?? 99));
 }
 
-// `?group=` wins, then the event's saved group, then Everyone.
+// The built-in class lists, in the order the pickers show them.
+export async function getAttendanceGroups(): Promise<Group[]> {
+  await ensureBuiltInGroups();
+  return builtInOrder(await prisma.group.findMany({ where: { builtIn: true } }));
+}
+
+// `?group=` wins, then the saved group, then Everyone. (Season summary page.)
 export function pickAttendanceGroup(
   groups: Group[],
   requestedId: string | undefined,
@@ -28,27 +39,86 @@ export function pickAttendanceGroup(
 
 // Contacts in a group, alphabetical. Everyone = the whole roster.
 export function getGroupContacts(group: Group): Promise<Contact[]> {
+  return getGroupsContacts([group]);
+}
+
+// Contacts in any of several groups, alphabetical. Everyone (or no group at
+// all) = the whole roster.
+export function getGroupsContacts(groups: Group[]): Promise<Contact[]> {
+  const everyone = groups.length === 0 || groups.some(isEveryone);
   return prisma.contact.findMany({
-    where: isEveryone(group) ? {} : { groups: { some: { groupId: group.id } } },
+    where: everyone ? {} : { groups: { some: { groupId: { in: groups.map((g) => g.id) } } } },
     orderBy: { name: "asc" },
   });
 }
 
+// The class lists an event expects and everyone in them. No rows = Everyone.
+export async function getEventRoster(eventId: string): Promise<{ groups: Group[]; contacts: Contact[] }> {
+  const links = await prisma.eventGroup.findMany({ where: { eventId }, include: { group: true } });
+  let groups = links.map((l) => l.group);
+  if (groups.length === 0) {
+    await ensureBuiltInGroups();
+    const everyone = await prisma.group.findUnique({ where: { name: EVERYONE } });
+    groups = everyone ? [everyone] : [];
+  }
+  return { groups: builtInOrder(groups), contacts: await getGroupsContacts(groups) };
+}
+
+// Everything the sheet shows, for the page's first render and for every SSE push.
+export async function loadSheetSnapshot(eventId: string): Promise<SheetSnapshot | null> {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    include: {
+      attendancePublishedBy: { select: { name: true } },
+      attendance: {
+        select: {
+          contactId: true,
+          status: true,
+          absenceEmailedAt: true,
+          contact: { select: { name: true, instrument: true } },
+        },
+      },
+    },
+  });
+  if (!event) return null;
+  const { groups, contacts } = await getEventRoster(eventId);
+  return {
+    version: Date.now(),
+    rows: buildSheetRows(
+      contacts,
+      event.attendance.map((r) => ({ ...r, status: r.status as AttendanceStatus })),
+    ),
+    groups: groups.map((g) => g.name),
+    takenAt: event.attendanceTakenAt?.toISOString() ?? null,
+    publishedAt: event.attendancePublishedAt?.toISOString() ?? null,
+    publishedBy: event.attendancePublishedBy?.name ?? null,
+    eventDay: event.date.toISOString().slice(0, 10),
+  };
+}
+
+// Push the sheet to every open tab. Loads a fresh snapshot unless given one.
+export async function broadcastSheet(eventId: string, snapshot?: SheetSnapshot | null): Promise<void> {
+  const snap = snapshot ?? (await loadSheetSnapshot(eventId));
+  if (snap) broadcastFrame(eventId, sseFrame("snapshot", snap));
+}
+
 export type SummaryTableRow = SummaryCsvRow & { id: string };
 
-// Season totals for every contact in the group, plus how many events have a
-// saved sheet (for the "N events taken" line).
+// Season totals for every contact in the group, over published sheets only (an
+// in-progress sheet would otherwise count its unmarked students as absent),
+// plus how many sheets have been published.
 export async function getAttendanceSummary(
   group: Group,
 ): Promise<{ rows: SummaryTableRow[]; eventsTaken: number }> {
   const contacts = await getGroupContacts(group);
   const ids = contacts.map((c) => c.id);
+  const published = { attendancePublishedAt: { not: null } };
   const [records, eventsTaken] = await Promise.all([
     prisma.attendanceRecord.findMany({
-      where: { contactId: { in: ids } },
+      where: { contactId: { in: ids }, event: published },
       select: { contactId: true, status: true },
     }),
-    prisma.event.count({ where: { attendanceTakenAt: { not: null } } }),
+    prisma.event.count({ where: published }),
   ]);
   const summary = summarizeAttendance(
     records.map((r) => ({ contactId: r.contactId, status: r.status as AttendanceStatus })),

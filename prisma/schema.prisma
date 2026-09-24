@@ -88,6 +88,7 @@ model User {
   libraryUploads    LibraryItem[]
   handoffNotes      HandoffNote[]
   eventsCreated     Event[]             @relation("EventCreator")
+  publishedSheets   Event[]             @relation("AttendancePublisher")
   notifications     Notification[]
   auditEntries      AuditLog[]
   securityEntries   SecurityLog[]       @relation("ActorSecurity")
@@ -167,12 +168,12 @@ model Contact {
 model Group {
   id        String         @id @default(cuid())
   name      String         @unique
-  // Built-in groups (Everyone/Marching/Concert/Jazz) cannot be deleted.
+  // Built-in groups (BUILTIN_GROUPS in src/lib/group-names.ts) cannot be deleted.
   builtIn   Boolean        @default(false)
   createdAt DateTime       @default(now())
   contacts  ContactGroup[]
   announcementLinks AnnouncementRecipientGroup[]
-  attendanceEvents  Event[]
+  eventLinks        EventGroup[]
 }
 
 model ContactGroup {
@@ -375,11 +376,16 @@ model Event {
   notify      Boolean       @default(false)
   createdById String?
   createdBy   User?         @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  // Who's expected: the class list chosen at creation; drives event emails and
-  // pre-selects the attendance sheet. Null = Everyone.
-  attendanceGroupId String?
-  attendanceGroup   Group?     @relation(fields: [attendanceGroupId], references: [id], onDelete: SetNull)
-  attendanceTakenAt DateTime?
+  // Who's expected: the class lists chosen at creation (EventGroup rows; none =
+  // Everyone). They drive event emails and the attendance sheet's roster.
+  groups            EventGroup[]
+  // Sheet state. attendanceTakenAt = last edit (every tap saves);
+  // attendancePublishedAt = when a drum major published it. Absence emails go
+  // out only after publish.
+  attendanceTakenAt       DateTime?
+  attendancePublishedAt   DateTime?
+  attendancePublishedById String?
+  attendancePublishedBy   User?  @relation("AttendancePublisher", fields: [attendancePublishedById], references: [id], onDelete: SetNull)
   attendance        AttendanceRecord[]
   notices           EventNotice[]
   createdAt   DateTime      @default(now())
@@ -388,8 +394,20 @@ model Event {
   @@index([audience, date])
 }
 
+// Which class lists an event expects. Modeled on AnnouncementRecipientGroup.
+model EventGroup {
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, groupId])
+  @@index([groupId])
+}
+
 // One row per expected student per band event. "Expected" = had a row when the
-// sheet was saved, so summaries divide by rows, not by current group size.
+// sheet was published (publishing fills in Absent for anyone unmarked), so
+// summaries divide by rows, not by current group size.
 enum AttendanceStatus {
   PRESENT
   ABSENT
@@ -404,8 +422,8 @@ model AttendanceRecord {
   contact   Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
   status    AttendanceStatus
   updatedAt DateTime         @updatedAt
-  // Absent students are emailed once (a grace period after the sheet is saved)
-  // with a personal appeal link.
+  // Absent students are emailed once, after the sheet is published, with a
+  // personal appeal link.
   absenceEmailedAt DateTime?
   appealToken      String?        @unique
   appeal           AbsenceAppeal?

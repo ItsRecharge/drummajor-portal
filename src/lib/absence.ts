@@ -1,19 +1,23 @@
 // Emails students who were marked Absent — once per event — with a personal
-// appeal link. Runs on the every-minute tick, but only for sheets saved at
-// least ABSENCE_GRACE_MINUTES ago, so leadership can fix a slip first
-// (re-saving restarts the clock). Failures are retried on a later tick.
+// appeal link. Only published sheets count, so an unpublished sheet never
+// emails anyone. Runs on the every-minute tick and right after a publish;
+// failures are retried on a later tick.
 import { prisma } from "@/lib/prisma";
 import { appBaseUrl, getSmtpConfig, sendMail } from "@/lib/email";
 import { getBandName } from "@/lib/leadership";
 import { randomToken } from "@/lib/tokens";
 import { absenceEmail } from "@/lib/absence-emails";
 import { getConflictPolicy } from "@/lib/attendance-policy";
+import { broadcastSheet } from "@/lib/attendance-data";
 import { AttendanceStatus, EventAudience } from "@/generated/prisma/client";
 import { formatEventWhen } from "@/app/(app)/events/event-dates";
 
-export const ABSENCE_GRACE_MINUTES = 30;
 const BATCH_PER_TICK = 40;
 const SEND_SPACING_MS = 250;
+
+// The publish action and the cron tick can both call processAbsenceEmails; the
+// flag lives on globalThis so separate server bundles share it.
+const lock = globalThis as unknown as { __dmpAbsenceRunning?: boolean };
 
 export function appealUrl(token: string): string {
   return `${appBaseUrl()}/appeal/${token}`;
@@ -22,12 +26,21 @@ export function appealUrl(token: string): string {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function processAbsenceEmails(now = new Date()): Promise<{ sent: number; failed: number }> {
-  const cutoff = new Date(now.getTime() - ABSENCE_GRACE_MINUTES * 60_000);
+  if (lock.__dmpAbsenceRunning) return { sent: 0, failed: 0 };
+  lock.__dmpAbsenceRunning = true;
+  try {
+    return await sendDue(now);
+  } finally {
+    lock.__dmpAbsenceRunning = false;
+  }
+}
+
+async function sendDue(now: Date): Promise<{ sent: number; failed: number }> {
   const due = await prisma.attendanceRecord.findMany({
     where: {
       status: AttendanceStatus.ABSENT,
       absenceEmailedAt: null,
-      event: { audience: EventAudience.BAND, attendanceTakenAt: { lte: cutoff } },
+      event: { audience: EventAudience.BAND, attendancePublishedAt: { not: null } },
     },
     include: { contact: true, event: true },
     orderBy: { updatedAt: "asc" },
@@ -64,6 +77,10 @@ export async function processAbsenceEmails(now = new Date()): Promise<{ sent: nu
       console.error(`[absence] email to ${r.contact.email} for "${r.event.title}" failed:`, err);
     }
     await sleep(SEND_SPACING_MS);
+  }
+  // Open sheets show an envelope on each emailed student.
+  for (const eventId of new Set(due.map((r) => r.eventId))) {
+    await broadcastSheet(eventId).catch((err) => console.error("[absence] broadcast failed:", err));
   }
   return { sent, failed };
 }
