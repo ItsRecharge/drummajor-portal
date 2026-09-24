@@ -17,25 +17,66 @@ export function isAttendanceStatus(v: unknown): v is AttendanceStatus {
   return typeof v === "string" && (ATTENDANCE_STATUSES as readonly string[]).includes(v);
 }
 
-// Sheet form fields are `status:<contactId>`.
-export const STATUS_FIELD_PREFIX = "status:";
+// What the roll-call sheet shows and streams. Serializable (ISO strings) so a
+// snapshot can travel over Server-Sent Events and back from a server action.
+export type SheetRow = {
+  id: string;
+  name: string;
+  instrument: string;
+  status: AttendanceStatus;
+  emailedAt: string | null;
+};
 
-export function statusFieldName(contactId: string): string {
-  return `${STATUS_FIELD_PREFIX}${contactId}`;
+export type SheetSnapshot = {
+  // Date.now() when loaded; clients ignore a snapshot older than the one shown.
+  version: number;
+  rows: SheetRow[];
+  // Names of the expected class lists.
+  groups: string[];
+  // Last edit (any tap), and when a drum major published the sheet.
+  takenAt: string | null;
+  publishedAt: string | null;
+  publishedBy: string | null;
+  // yyyy-mm-dd, for the "not before the event" publish guard.
+  eventDay: string;
+};
+
+type RosterContact = { id: string; name: string; instrument: string | null };
+type SheetRecord = {
+  contactId: string;
+  status: AttendanceStatus;
+  absenceEmailedAt: string | Date | null;
+  contact: { name: string; instrument: string | null };
+};
+
+// The roster plus anyone who already has a record (they may have left the group
+// since), alphabetical. No record yet = Absent.
+export function buildSheetRows(roster: RosterContact[], records: SheetRecord[]): SheetRow[] {
+  const byId = new Map(records.map((r) => [r.contactId, r]));
+  const rows = new Map<string, SheetRow>();
+  const add = (id: string, name: string, instrument: string | null) => {
+    const r = byId.get(id);
+    const emailed = r?.absenceEmailedAt ?? null;
+    rows.set(id, {
+      id,
+      name,
+      instrument: instrument ?? "",
+      status: r?.status ?? "ABSENT",
+      emailedAt: emailed instanceof Date ? emailed.toISOString() : emailed,
+    });
+  };
+  for (const c of roster) add(c.id, c.name, c.instrument);
+  for (const r of records) if (!rows.has(r.contactId)) add(r.contactId, r.contact.name, r.contact.instrument);
+  return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// One entry per expected contact. Missing or unrecognised values mean ABSENT;
-// fields for contacts outside the expected list are ignored.
-export function parseAttendanceForm(
-  formData: FormData,
-  expectedContactIds: string[],
-): Map<string, AttendanceStatus> {
-  const out = new Map<string, AttendanceStatus>();
-  for (const id of expectedContactIds) {
-    const raw = formData.get(statusFieldName(id));
-    out.set(id, isAttendanceStatus(raw) ? raw : "ABSENT");
-  }
-  return out;
+// Optimistic overrides for taps still in flight. Untouched rows keep identity.
+export function applyPending(rows: SheetRow[], pending: ReadonlyMap<string, AttendanceStatus>): SheetRow[] {
+  if (pending.size === 0) return rows;
+  return rows.map((r) => {
+    const s = pending.get(r.id);
+    return s && s !== r.status ? { ...r, status: s } : r;
+  });
 }
 
 export type StatusCounts = { present: number; late: number; excused: number; absent: number };

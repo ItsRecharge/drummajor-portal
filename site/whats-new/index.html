@@ -117,7 +117,8 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
       <div class="feature-media"><img loading="lazy" src="../img/whats-new/events.png" alt="Band Events page: the new-event form with a Who's expected picker, and the event list" width="1440" height="900"></div>
       <div class="feature-copy">
         <ul class="rules">
-          <li><strong>Who's expected:</strong> each band event names a class list (Jazz Band, Concert/Marching Band or Everyone). That decides who gets the emails and pre-fills the attendance sheet.</li>
+          <li><strong>Who's expected:</strong> each band event ticks one or more class lists (Jazz Band, Concert/Marching Band, Concert/Jazz Band Only) or Everyone on its own. That decides who gets the emails and who is on the attendance sheet; the list names show under the event. Anyone in two lists is emailed once.</li>
+          <li><strong>Edit an event</strong> with the pencil button: title, date, time, location, details and who's expected. Changing the date restarts the reminders.</li>
           <li><strong>Adding an event</strong> sends nothing by itself; it goes on the calendar and the reminders do the emailing.</li>
           <li><strong>Reminders</strong> go out at 9 AM one week before, three days before, and the morning of.</li>
           <li><strong>Monthly overview:</strong> on the 1st, everyone gets a list of that month's events (only if something is more than a week away).</li>
@@ -145,10 +146,11 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
     <div class="feature">
       <div class="feature-copy">
         <ul class="rules">
-          <li><strong>Each band event has an Attendance button.</strong> The sheet opens with the event's class list; you can switch lists at the top.</li>
-          <li><strong>Everyone starts as Absent.</strong> Tap <em>Present</em>, <em>Late</em> or <em>Excused</em> as you call names, or <em>Mark all present</em> and fix the exceptions. The search box finds a name.</li>
-          <li><strong>You can edit it later.</strong> Re-saving updates the sheet; the event row shows a <em>Taken</em> badge.</li>
-          <li><strong>Season totals</strong> are under <em>Attendance</em> in the sidebar: expected, present, late, excused, absent, and a rate that ignores excused absences. Both screens have a CSV export.</li>
+          <li><strong>Each band event has an Attendance button.</strong> The sheet lists whoever is in the event's class lists; change that with the event's <em>Edit</em> button.</li>
+          <li><strong>Tap names as you call them.</strong> <em>Present</em>, <em>Late</em>, <em>Excused</em> or <em>Absent</em>, or <em>Mark all present</em> and fix the exceptions (<em>Mark all absent</em> asks you to confirm). The search box finds a name.</li>
+          <li><strong>It saves on every tap.</strong> There is no Save button. Several drum majors can take roll at the same time and see each other's taps within a second; <em>Also here</em> shows who has the sheet open. The event row shows <em>In progress</em> until you publish.</li>
+          <li><strong>Publish when you're done.</strong> <em>Publish attendance</em> fills in Absent for anyone still unmarked and emails the absent students. The sheet stays editable afterwards; the row shows <em>Published</em>.</li>
+          <li><strong>Season totals</strong> are under <em>Attendance</em> in the sidebar: expected, present, late, excused, absent, and a rate that ignores excused absences, counting published sheets only. Both screens have a CSV export.</li>
         </ul>
       </div>
       <div class="feature-media"><img loading="lazy" src="../img/whats-new/attendance-sheet.png" alt="Attendance sheet: one row per student with Present / Late / Excused / Absent toggles and live counts" width="1440" height="900"></div>
@@ -157,7 +159,7 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
       <div class="feature-media"><img loading="lazy" src="../img/whats-new/attendance-summary.png" alt="Attendance page: pending appeals at the top, season totals per student below" width="1440" height="900"></div>
       <div class="feature-copy">
         <h2 style="font-size:1.3rem">The Attendance page</h2>
-        <p>Pending appeals are at the top. Below that is the season table for the class list you pick.</p>
+        <p>Pending appeals are at the top. Below that is the season table for the class list you pick, built from published sheets only.</p>
       </div>
     </div>
   </div>
@@ -168,12 +170,12 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
     <div class="sec-head">
       <span class="set-tag">4 of 5</span>
       <h2>Absences and appeals</h2>
-      <p>Absent students are emailed automatically and can ask for the absence to be excused.</p>
+      <p>Absent students are emailed when you publish the sheet and can ask for the absence to be excused.</p>
     </div>
     <div class="feature">
       <div class="feature-copy">
         <ul class="rules">
-          <li><strong>30 minutes after you save,</strong> every student still marked Absent gets an email saying attendance is mandatory and may impact their grade, with a personal <em>Appeal this absence</em> link. The 30 minutes gives you time to fix mistakes; re-saving restarts the clock, and nobody is emailed twice for the same event.</li>
+          <li><strong>When you click Publish attendance and confirm,</strong> every student marked Absent (including anyone you left unmarked) gets an email saying attendance is mandatory and may impact their grade, with a personal <em>Appeal this absence</em> link. An unpublished sheet never emails anyone. After publishing, anyone you newly mark Absent is emailed within a minute, and nobody is emailed twice for the same event.</li>
           <li><strong>The appeal is one text box,</strong> no login needed. When a student sends one, you get a notification and an email.</li>
           <li><strong>Excuse it or Deny</strong> on the Attendance page. <em>Excuse it</em> changes their record to Excused. Either way the student gets an email with the decision.</li>
           <li><strong>Fixing the sheet also works.</strong> If you change someone from Absent to Present yourself, their pending appeal is approved automatically and they are emailed.</li>
@@ -270,7 +272,7 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
         <details class="mail" open>
   <summary><span><strong>Marked absent</strong><span class="mail-sub">Marked absent: Homecoming Halftime Show — Fri, Oct 16 at 6:30 PM</span></span></summary>
   <div class="body">
-    <p class="mail-meta"><span class="k">To</span>The student<br><span class="k">Sent</span>30 minutes after an attendance sheet is saved, to each student still marked Absent (once per event; re-saving restarts the clock).</p>
+    <p class="mail-meta"><span class="k">To</span>The student<br><span class="k">Sent</span>When a drum major publishes the attendance sheet, to each student marked Absent; anyone marked Absent afterwards is emailed within a minute (once per event).</p>
     <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
   <div style="max-width:600px;margin:0 auto">
     <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
@@ -339,9 +341,9 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
       <p>Five things to keep doing.</p>
     </div>
     <div class="steps">
-      <div class="step"><span class="set">1</span><h3>Add every event as soon as you know it</h3><p>Title, date, time, place, and who's expected. Events far out don't send an email; they just appear on the calendar and in the monthly overview.</p></div>
+      <div class="step"><span class="set">1</span><h3>Add every event as soon as you know it</h3><p>Title, date, time, place, and who's expected (one or more class lists). Events far out don't send an email; they just appear on the calendar and in the monthly overview. Use the pencil to edit later; changing the date restarts the reminders.</p></div>
       <div class="step"><span class="set">2</span><h3>Share the calendar address</h3><p>Your portal address + <code>/calendar</code>. Tell people to use <em>Subscribe</em> so it shows up on their phone.</p></div>
-      <div class="step"><span class="set">3</span><h3>Take attendance at every rehearsal and performance</h3><p>Open the event → <em>Attendance</em> → tap names → <em>Save</em>. You have 30 minutes to fix mistakes before absence emails go out.</p></div>
+      <div class="step"><span class="set">3</span><h3>Take attendance at every rehearsal and performance</h3><p>Open the event → <em>Attendance</em> → tap names → <em>Publish attendance</em>. Nothing is emailed until you publish; after that the sheet stays editable.</p></div>
       <div class="step"><span class="set">4</span><h3>Check the Attendance page for appeals</h3><p>You get a notification and an email when one comes in. <em>Excuse it</em> or <em>Deny</em>; the student is emailed either way.</p></div>
       <div class="step"><span class="set">5</span><h3>Keep the CC drum major current</h3><p>If a banner asks who should be CC'd on conflicts, pick someone. It means the previous person is no longer in the portal.</p></div>
     </div>

@@ -3,44 +3,22 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
+import { loadSheetSnapshot } from "@/lib/attendance-data";
 import { Role, EventAudience } from "@/generated/prisma/client";
-import { getAttendanceGroups, getGroupContacts, pickAttendanceGroup } from "@/lib/attendance-data";
-import type { AttendanceStatus } from "@/lib/attendance";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GroupPicker } from "@/components/group-picker";
 import { formatEventWhen } from "../../event-dates";
-import { AttendanceSheet, type SheetRow } from "./attendance-sheet";
+import { AttendanceSheet } from "./attendance-sheet";
 
 export const metadata = { title: "Attendance — Drum Major Portal" };
 
-export default async function EventAttendancePage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ group?: string }>;
-}) {
-  await requireRole(Role.ADMIN, Role.DRUM_MAJOR);
-  const [{ id }, { group: requestedGroupId }] = await Promise.all([params, searchParams]);
-
-  const event = await prisma.event.findUnique({
-    where: { id },
-    include: { attendance: { select: { contactId: true, status: true } } },
-  });
+export default async function EventAttendancePage({ params }: { params: Promise<{ id: string }> }) {
+  const { user } = await requireRole(Role.ADMIN, Role.DRUM_MAJOR);
+  const { id } = await params;
+  const event = await prisma.event.findUnique({ where: { id } });
   if (!event || event.audience !== EventAudience.BAND) notFound();
-
-  const groups = await getAttendanceGroups();
-  const group = pickAttendanceGroup(groups, requestedGroupId, event.attendanceGroupId);
-  const contacts = await getGroupContacts(group);
-  const saved = new Map(event.attendance.map((r) => [r.contactId, r.status as AttendanceStatus]));
-  // Fresh sheet: everyone starts Absent; tap the students who are here.
-  const rows: SheetRow[] = contacts.map((c) => ({
-    id: c.id,
-    name: c.name,
-    instrument: c.instrument ?? "",
-    status: saved.get(c.id) ?? "ABSENT",
-  }));
+  const snapshot = await loadSheetSnapshot(id);
+  if (!snapshot) notFound();
 
   return (
     <div className="grid gap-6">
@@ -60,31 +38,19 @@ export default async function EventAttendancePage({
           <div>
             <CardTitle>Roll call</CardTitle>
             <CardDescription>
-              {event.attendanceTakenAt
-                ? `Last saved ${event.attendanceTakenAt.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.`
-                : "Not taken yet. Everyone starts as absent."}{" "}
-              Absent students are emailed automatically 30 minutes after the sheet is saved (re-saving restarts the
-              clock) with a link to appeal.
+              Expected: {snapshot.groups.join(" + ")} · {snapshot.rows.length} student
+              {snapshot.rows.length === 1 ? "" : "s"}. Every tap saves at once and shows up for every drum major on
+              this sheet. Absent students are emailed only when someone publishes it.
             </CardDescription>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <GroupPicker groups={groups.map((g) => ({ id: g.id, name: g.name }))} value={group.id} />
-            {event.attendanceTakenAt ? (
-              <a href={`/events/${event.id}/attendance/export`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-                <Download /> CSV
-              </a>
-            ) : null}
-          </div>
+          {snapshot.takenAt ? (
+            <a href={`/events/${event.id}/attendance/export`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <Download /> CSV
+            </a>
+          ) : null}
         </CardHeader>
         <CardContent>
-          {/* Key resets client state when the group changes. Not on save: the
-              sheet must survive its own action so the toast can fire. */}
-          <AttendanceSheet
-            key={group.id}
-            eventId={event.id}
-            groupId={group.id}
-            rows={rows}
-          />
+          <AttendanceSheet eventId={event.id} initial={snapshot} viewerName={user.name} />
         </CardContent>
       </Card>
     </div>

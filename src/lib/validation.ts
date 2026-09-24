@@ -141,8 +141,7 @@ export const eventSchema = z.object({
   date: requiredDateTime,
   time: z.string().optional(),
   audience: z.enum(["BAND", "DRUM_MAJORS"]).default("BAND"),
-  // Band events: which built-in class list is expected (blank = Everyone).
-  groupId: z.string().optional(),
+  // Band events also post `groupIds` checkboxes, read with formData.getAll.
 });
 
 // Settings → Attendance policy: who students email about a conflict.

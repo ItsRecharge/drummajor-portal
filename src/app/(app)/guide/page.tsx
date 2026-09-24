@@ -85,7 +85,8 @@ export default async function GuidePage() {
           <li>
             <strong>Clear last year&apos;s roster</strong> (see section 3), then{" "}
             <strong>import this year&apos;s rosters</strong> from Google Classroom (section 2) — one
-            file for Jazz Band, one for Concert/Marching Band.
+            file for Jazz Band, one for Concert/Marching Band (and one for Concert/Jazz Band Only
+            if it has its own Classroom).
           </li>
           <li>
             Send a short test announcement to yourself first: pick a group, send, and check that it
@@ -115,7 +116,9 @@ export default async function GuidePage() {
           </li>
           <li>
             Repeat for the other class: one save for <strong>Jazz Band</strong>, one for{" "}
-            <strong>Concert Band / Wind Ensemble / Marching Band</strong>.
+            <strong>Concert Band / Wind Ensemble / Marching Band</strong>. The same import works for{" "}
+            <strong>Concert/Jazz Band Only</strong> if there is a separate Classroom for it; otherwise
+            tick its members per contact on the <em>Roster</em> page.
           </li>
           <li>
             In the portal: user menu → <em>Roster</em> → <em>Import from Google Classroom</em>. Pick
@@ -181,8 +184,8 @@ export default async function GuidePage() {
         <ul>
           <li>
             <em>Email Announcements</em> → <strong>New announcement</strong>. Choose who it&apos;s for
-            (Jazz Band, Concert/Marching Band, or Everyone), write the subject and message, and
-            send now, schedule, or save a draft.
+            (Jazz Band, Concert/Marching Band, Concert/Jazz Band Only, or Everyone), write the
+            subject and message, and send now, schedule, or save a draft.
           </li>
           <li>
             Type <code>@</code> in the message to mention a piece of music from the Library. It is
@@ -198,14 +201,18 @@ export default async function GuidePage() {
       <Section id="events" title="6. Events, reminders and the public calendar">
         <ol>
           <li>
-            Add every rehearsal, performance and competition under <em>Band Events</em> and pick{" "}
-            <strong>who&apos;s expected</strong> (Jazz Band, Concert/Marching Band, or Everyone). It goes straight
-            onto the public calendar at <code>/calendar</code>, which anyone can open or subscribe to.
+            Add every rehearsal, performance and competition under <em>Band Events</em> and tick{" "}
+            <strong>who&apos;s expected</strong> — one or more class lists (Jazz Band, Concert/Marching Band,
+            Concert/Jazz Band Only), or Everyone on its own. It goes straight onto the public calendar at{" "}
+            <code>/calendar</code>, which anyone can open or subscribe to, and the list names show under the
+            event. The pencil (<em>Edit</em>) button on an event changes its title, date, time, location,
+            details or who&apos;s expected; changing the date restarts the reminders.
           </li>
           <li>
             Adding an event <strong>sends nothing by itself</strong>. The portal takes over: a reminder a week
             out, three days out, and the morning of, each with the conflict rule (an event added for today gets
-            its day-of email right away). On the 1st of the month (9 AM) everyone gets an overview if anything
+            its day-of email right away). Reminders go to every list you picked; anyone in two lists is emailed
+            once. On the 1st of the month (9 AM) everyone gets an overview if anything
             is more than a week away.
           </li>
           <li>
@@ -225,28 +232,34 @@ export default async function GuidePage() {
       <Section id="attendance" title="7. Taking attendance">
         <ol>
           <li>
-            Create the rehearsal or performance under <em>Band Events</em> (it only needs a title and
-            date), then click <strong>Attendance</strong> on its row.
+            Create the rehearsal or performance under <em>Band Events</em> (it only needs a title, a
+            date and who&apos;s expected), then click <strong>Attendance</strong> on its row.
           </li>
           <li>
-            Pick the class list at the top (Jazz Band, Concert/Marching Band, or Everyone). Everyone
-            starts as <strong>Absent</strong> — tap <strong>Present</strong>, <strong>Late</strong> or{" "}
-            <strong>Excused</strong> as you call names, or use <em>Mark all present</em> and fix the
-            exceptions. The search box jumps to a name.
+            The sheet lists whoever is in the event&apos;s class lists (change that with the event&apos;s{" "}
+            <em>Edit</em> button). Tap <strong>Present</strong>, <strong>Late</strong>,{" "}
+            <strong>Excused</strong> or <strong>Absent</strong> as you call names, or use{" "}
+            <em>Mark all present</em> and fix the exceptions. <em>Mark all absent</em> asks you to confirm
+            because it replaces everyone&apos;s marks at once. The search box jumps to a name.
           </li>
           <li>
-            <strong>Save attendance</strong>. You can come back and change it any time; the event row
-            shows a <em>Taken</em> badge.
+            There is no Save button — every tap is saved as you go. Several drum majors can take
+            attendance at the same time and see each other&apos;s taps within a second;{" "}
+            <em>Also here</em> shows who has the sheet open. The event row shows an{" "}
+            <em>In progress</em> badge until you publish.
           </li>
           <li>
             <em>Attendance</em> in the sidebar shows season totals per student (present, late,
-            excused, absent, and a rate that ignores excused absences). Both screens have a{" "}
-            <strong>CSV</strong> button for the director.
+            excused, absent, and a rate that ignores excused absences), counting published sheets
+            only. Both screens have a <strong>CSV</strong> button for the director.
           </li>
           <li>
-            Thirty minutes after you save, every student still marked <strong>Absent</strong> is emailed
-            automatically: attendance is mandatory and may affect their grade, and they get a personal link to{" "}
-            <strong>appeal</strong> if the absence was excused or recorded wrong. Appeals land at the top of the{" "}
+            When you&apos;re done, click <strong>Publish attendance</strong> and confirm. Publishing fills in{" "}
+            <strong>Absent</strong> for anyone still unmarked and emails every absent student right away:
+            attendance is mandatory and may affect their grade, and they get a personal link to{" "}
+            <strong>appeal</strong> if the absence was excused or recorded wrong. An unpublished sheet never
+            emails anyone. After publishing, the sheet stays editable (the row shows <em>Published</em>) and
+            anyone you newly mark absent is emailed within a minute. Appeals land at the top of the{" "}
             <em>Attendance</em> page — <em>Excuse it</em> flips the record to Excused, <em>Deny</em> leaves it; the
             student is emailed either way. Fixing a status on the sheet yourself also settles a pending appeal.
           </li>

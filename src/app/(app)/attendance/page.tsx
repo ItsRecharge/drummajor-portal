@@ -72,8 +72,8 @@ export default async function AttendancePage({
             <CardTitle>{group.name}</CardTitle>
             <CardDescription>
               {eventsTaken === 0
-                ? "No attendance taken yet."
-                : `${eventsTaken} event${eventsTaken === 1 ? "" : "s"} taken. Rate = present + late, out of expected minus excused.`}
+                ? "No attendance published yet."
+                : `${eventsTaken} sheet${eventsTaken === 1 ? "" : "s"} published. Rate = present + late, out of expected minus excused.`}
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">

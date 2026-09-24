@@ -10,6 +10,7 @@ import { sendMail } from "@/lib/email";
 import { getBandName } from "@/lib/leadership";
 import { getConflictPolicy } from "@/lib/attendance-policy";
 import { appealDecisionEmail } from "@/lib/absence-emails";
+import { broadcastSheet } from "@/lib/attendance-data";
 import { AppealStatus, AttendanceStatus, Role } from "@/generated/prisma/client";
 import { formatEventWhen } from "../events/event-dates";
 
@@ -62,6 +63,9 @@ export async function decideAppealAction(_prev: ActionState, formData: FormData)
       console.error(`[appeal] decision email to ${contact.email} failed:`, err),
     ),
   );
+
+  // An excused absence shows up on any open roll-call sheet at once.
+  after(() => broadcastSheet(event.id));
 
   revalidatePath("/attendance");
   revalidatePath(`/events/${event.id}/attendance`);

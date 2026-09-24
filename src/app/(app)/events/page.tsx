@@ -17,7 +17,7 @@ export default async function EventsPage() {
     prisma.event.findMany({
       where: { audience: EventAudience.BAND },
       orderBy: { date: "asc" },
-      include: { notices: { select: { id: true } } },
+      include: { notices: { select: { id: true } }, groups: { include: { group: { select: { name: true } } } } },
     }),
     getAttendanceGroups(),
   ]);

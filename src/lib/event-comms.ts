@@ -46,14 +46,26 @@ async function everyoneGroupId(): Promise<string | null> {
   return g?.id ?? null;
 }
 
-// Create + queue an announcement to one group. Returns the announcement id.
-async function queueAnnouncement(mail: EventMail, authorId: string, groupId: string): Promise<string> {
+// Create + queue one announcement to the given groups (the queue emails anyone
+// in two of them once). Returns the announcement id.
+async function queueAnnouncement(mail: EventMail, authorId: string, groupIds: string[]): Promise<string> {
   const announcement = await prisma.announcement.create({
     data: { subject: mail.subject, bodyHtml: mail.body, authorId },
   });
-  await prisma.announcementRecipientGroup.create({ data: { announcementId: announcement.id, groupId } });
+  await prisma.announcementRecipientGroup.createMany({
+    data: groupIds.map((groupId) => ({ announcementId: announcement.id, groupId })),
+    skipDuplicates: true,
+  });
   await enqueueAnnouncement(announcement.id, {});
   return announcement.id;
+}
+
+// The class lists an event expects; none stored = Everyone.
+async function eventGroupIds(eventId: string): Promise<string[]> {
+  const links = await prisma.eventGroup.findMany({ where: { eventId }, select: { groupId: true } });
+  if (links.length > 0) return links.map((l) => l.groupId);
+  const everyone = await everyoneGroupId();
+  return everyone ? [everyone] : [];
 }
 
 async function eventMailInput(event: Event) {
@@ -69,19 +81,19 @@ async function eventMailInput(event: Event) {
   };
 }
 
-// Send one email about an event to its expected class list and record every
+// Send one email about an event to its expected class lists and record every
 // notice kind it covers (so later reminders know they're done).
 export async function sendEventEmail(
   event: Event,
   notice: { send: ReminderKind; record: ReminderKind[] },
 ): Promise<string | null> {
   const authorId = event.createdById ?? (await fallbackAuthorId());
-  const groupId = event.attendanceGroupId ?? (await everyoneGroupId());
-  if (!authorId || !groupId) return null;
+  const groupIds = await eventGroupIds(event.id);
+  if (!authorId || groupIds.length === 0) return null;
 
   const input = await eventMailInput(event);
   const mail = eventReminderEmail(notice.send, input);
-  const announcementId = await queueAnnouncement(mail, authorId, groupId);
+  const announcementId = await queueAnnouncement(mail, authorId, groupIds);
   await prisma.eventNotice.createMany({
     data: notice.record.map((kind) => ({
       eventId: event.id,
@@ -158,7 +170,7 @@ export async function sendMonthlyDigestIfDue(now = new Date()): Promise<boolean>
     policy,
     bandName,
   });
-  const announcementId = await queueAnnouncement(mail, authorId, groupId);
+  const announcementId = await queueAnnouncement(mail, authorId, [groupId]);
   await prisma.digestLog.create({ data: { period, announcementId } });
   return true;
 }
