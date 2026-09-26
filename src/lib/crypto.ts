@@ -20,7 +20,7 @@ const SALT_LEN = 16;
 // clone runs without configuring secrets. Never used in production.
 const DEV_FALLBACK_KEY = "dev-only-insecure-key-do-not-use-in-prod-0000000";
 
-function getMasterKey(): string {
+export function getMasterKey(): string {
   const key = process.env.APP_ENCRYPTION_KEY;
   if (!key || key.length < 32) {
     if (process.env.NODE_ENV !== "production") return DEV_FALLBACK_KEY;

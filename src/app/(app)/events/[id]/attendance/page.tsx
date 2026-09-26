@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, QrCode } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
+import { getAppSettings } from "@/lib/settings";
 import { loadSheetSnapshot } from "@/lib/attendance-data";
 import { Role, EventAudience } from "@/generated/prisma/client";
 import { buttonVariants } from "@/components/ui/button";
@@ -17,8 +18,9 @@ export default async function EventAttendancePage({ params }: { params: Promise<
   const { id } = await params;
   const event = await prisma.event.findUnique({ where: { id } });
   if (!event || event.audience !== EventAudience.BAND) notFound();
-  const snapshot = await loadSheetSnapshot(id);
+  const [snapshot, settings] = await Promise.all([loadSheetSnapshot(id), getAppSettings()]);
   if (!snapshot) notFound();
+  const checkInEnabled = settings?.checkInEnabled ?? false;
 
   return (
     <div className="grid gap-6">
@@ -43,11 +45,21 @@ export default async function EventAttendancePage({ params }: { params: Promise<
               this sheet. Absent students are emailed only when someone publishes it.
             </CardDescription>
           </div>
-          {snapshot.takenAt ? (
-            <a href={`/events/${event.id}/attendance/export`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-              <Download /> CSV
-            </a>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {checkInEnabled ? (
+              <Link
+                href={`/events/${event.id}/attendance/checkin`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                <QrCode /> QR check-in (beta)
+              </Link>
+            ) : null}
+            {snapshot.takenAt ? (
+              <a href={`/events/${event.id}/attendance/export`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                <Download /> CSV
+              </a>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent>
           <AttendanceSheet eventId={event.id} initial={snapshot} viewerName={user.name} />

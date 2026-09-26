@@ -440,6 +440,20 @@ at once, later Absent marks on a published sheet go out on the every-minute tick
 emails, and `/attendance` totals count published sheets only. Event badges are In progress / Published. New
 built-in class list "Concert/Jazz Band Only" (`CONCERT_JAZZ_ONLY_GROUP`). Migration `9a_event_groups_publish`.
 
+QR self check-in (beta) (2026-09-26, branch `feat/qr-checkin`, spec
+`docs/superpowers/specs/2026-09-25-qr-self-checkin-design.md`): admin toggle + radius in Settings → Attendance
+policy (`AppSettings.checkInEnabled/checkInRadiusM`). A drum major opens check-in on `/events/[id]/attendance/checkin`
+(their GPS becomes the anchor, `Event.checkIn*`); the page shows a QR of `/checkin/<eventId>?k=<token>` where the
+token is an HMAC of the 20-second window (key derived from `APP_ENCRYPTION_KEY`, current + previous window accepted).
+A good scan mints a 5-minute ticket; the public form sends name + location. Rules are pure in
+`src/lib/checkin-rules.ts` (session open on the event's New York day only, accuracy ≤ 200 m, within radius, exact
+normalized roster match, a phone bound to the first student it checked in as); `src/lib/checkin-data.ts` writes a
+`CheckIn` row (one per phone per event, `deviceId` = sha256 of the `dm_device` cookie, issued by
+`POST /checkin/device`) and marks Present unless a drum major already set Late/Excused or re-marked Absent after a
+scan. Flags DUP_NAME / NEW_DEVICE / EDGE / LATE show on the sheet. In-memory rate limits per ticket, phone and IP.
+Publish closes check-in. Migration `9b_qr_checkin`. Note: the repo-root `proxy.ts` is not loaded by Next (a `src/`
+app needs `src/proxy.ts`); auth never relied on it.
+
 Dev notes:
 - Build locally with a throwaway Postgres URL so build workers never open PGlite:
   `DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build`.

@@ -75,24 +75,38 @@ export async function loadSheetSnapshot(eventId: string): Promise<SheetSnapshot 
           contactId: true,
           status: true,
           absenceEmailedAt: true,
+          checkedInAt: true,
           contact: { select: { name: true, instrument: true } },
         },
       },
+      checkIns: { select: { contactId: true, flags: true } },
+      _count: { select: { checkIns: true } },
     },
   });
   if (!event) return null;
   const { groups, contacts } = await getEventRoster(eventId);
+  // Two phones claiming one student both carry flags; the row shows the union.
+  const flagsByContact = new Map<string, string[]>();
+  for (const c of event.checkIns) {
+    flagsByContact.set(c.contactId, [...new Set([...(flagsByContact.get(c.contactId) ?? []), ...c.flags])]);
+  }
   return {
     version: Date.now(),
     rows: buildSheetRows(
       contacts,
       event.attendance.map((r) => ({ ...r, status: r.status as AttendanceStatus })),
+      flagsByContact,
     ),
     groups: groups.map((g) => g.name),
     takenAt: event.attendanceTakenAt?.toISOString() ?? null,
     publishedAt: event.attendancePublishedAt?.toISOString() ?? null,
     publishedBy: event.attendancePublishedBy?.name ?? null,
     eventDay: event.date.toISOString().slice(0, 10),
+    checkIn: {
+      openedAt: event.checkInOpenedAt?.toISOString() ?? null,
+      closedAt: event.checkInClosedAt?.toISOString() ?? null,
+      count: event._count.checkIns,
+    },
   };
 }
 

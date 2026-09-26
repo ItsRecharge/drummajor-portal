@@ -268,14 +268,17 @@ export async function saveAttendancePolicyAction(_prev: ActionState, formData: F
       absenceContactName: parsed.data.absenceContactName,
       absenceContactEmail: parsed.data.absenceContactEmail ?? null,
       absenceCcUserId: cc?.id ?? null,
+      checkInEnabled: parsed.data.checkInEnabled,
+      checkInRadiusM: parsed.data.checkInRadiusM,
     },
   });
   await logAudit({
     actorId: user.id,
     action: "ATTENDANCE_POLICY_UPDATED",
     target: `${parsed.data.absenceContactName} / cc ${cc?.name ?? "nobody"}`,
+    metadata: { checkInEnabled: parsed.data.checkInEnabled, checkInRadiusM: parsed.data.checkInRadiusM },
   });
   revalidatePath("/", "layout");
   revalidatePath("/settings");
-  return { success: true, message: "Conflict contacts saved." };
+  return { success: true, message: "Attendance policy saved." };
 }

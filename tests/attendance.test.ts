@@ -35,16 +35,50 @@ test("buildSheetRows: roster order, missing record → Absent, record-only stude
     ],
   );
   assert.deepEqual(rows, [
-    { id: "a", name: "Ann Lee", instrument: "", status: "ABSENT", emailedAt: null },
-    { id: "b", name: "Bo Li", instrument: "Tuba", status: "LATE", emailedAt: null },
-    { id: "z", name: "Zed Q", instrument: "Drums", status: "ABSENT", emailedAt: "2026-09-23T20:00:00.000Z" },
+    { id: "a", name: "Ann Lee", instrument: "", status: "ABSENT", emailedAt: null, checkedInAt: null, checkInFlags: [] },
+    { id: "b", name: "Bo Li", instrument: "Tuba", status: "LATE", emailedAt: null, checkedInAt: null, checkInFlags: [] },
+    {
+      id: "z",
+      name: "Zed Q",
+      instrument: "Drums",
+      status: "ABSENT",
+      emailedAt: "2026-09-23T20:00:00.000Z",
+      checkedInAt: null,
+      checkInFlags: [],
+    },
   ]);
+});
+
+test("buildSheetRows: QR check-in time is passed through as ISO and flags come from the map", () => {
+  const rows = buildSheetRows(
+    [
+      { id: "a", name: "Ann Lee", instrument: null },
+      { id: "b", name: "Bo Li", instrument: null },
+    ],
+    [
+      {
+        contactId: "a",
+        status: "PRESENT",
+        absenceEmailedAt: null,
+        checkedInAt: new Date("2026-09-25T18:05:00.000Z"),
+        contact: { name: "Ann Lee", instrument: null },
+      },
+    ],
+    new Map([["a", ["EDGE", "LATE"]]]),
+  );
+  assert.deepEqual(
+    rows.map((r) => [r.id, r.checkedInAt, r.checkInFlags]),
+    [
+      ["a", "2026-09-25T18:05:00.000Z", ["EDGE", "LATE"]],
+      ["b", null, []],
+    ],
+  );
 });
 
 test("applyPending overrides only the listed students", () => {
   const rows = [
-    { id: "a", name: "Ann", instrument: "", status: "ABSENT" as const, emailedAt: null },
-    { id: "b", name: "Bo", instrument: "", status: "ABSENT" as const, emailedAt: null },
+    { id: "a", name: "Ann", instrument: "", status: "ABSENT" as const, emailedAt: null, checkedInAt: null, checkInFlags: [] },
+    { id: "b", name: "Bo", instrument: "", status: "ABSENT" as const, emailedAt: null, checkedInAt: null, checkInFlags: [] },
   ];
   const out = applyPending(rows, new Map([["b", "PRESENT" as const]]));
   assert.deepEqual(

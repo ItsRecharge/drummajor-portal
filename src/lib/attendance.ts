@@ -25,6 +25,10 @@ export type SheetRow = {
   instrument: string;
   status: AttendanceStatus;
   emailedAt: string | null;
+  // When the student checked themselves in by QR (see checkin-rules.ts), and
+  // the review flags on that check-in.
+  checkedInAt: string | null;
+  checkInFlags: string[];
 };
 
 export type SheetSnapshot = {
@@ -39,6 +43,8 @@ export type SheetSnapshot = {
   publishedBy: string | null;
   // yyyy-mm-dd, for the "not before the event" publish guard.
   eventDay: string;
+  // QR self check-in session: open while openedAt is set and closedAt is null.
+  checkIn: { openedAt: string | null; closedAt: string | null; count: number };
 };
 
 type RosterContact = { id: string; name: string; instrument: string | null };
@@ -46,23 +52,33 @@ type SheetRecord = {
   contactId: string;
   status: AttendanceStatus;
   absenceEmailedAt: string | Date | null;
+  checkedInAt?: string | Date | null;
   contact: { name: string; instrument: string | null };
 };
 
+const iso = (v: string | Date | null | undefined): string | null =>
+  v instanceof Date ? v.toISOString() : (v ?? null);
+
 // The roster plus anyone who already has a record (they may have left the group
-// since), alphabetical. No record yet = Absent.
-export function buildSheetRows(roster: RosterContact[], records: SheetRecord[]): SheetRow[] {
+// since), alphabetical. No record yet = Absent. `flagsByContact` carries the
+// review flags of each student's QR check-in.
+export function buildSheetRows(
+  roster: RosterContact[],
+  records: SheetRecord[],
+  flagsByContact: ReadonlyMap<string, string[]> = new Map(),
+): SheetRow[] {
   const byId = new Map(records.map((r) => [r.contactId, r]));
   const rows = new Map<string, SheetRow>();
   const add = (id: string, name: string, instrument: string | null) => {
     const r = byId.get(id);
-    const emailed = r?.absenceEmailedAt ?? null;
     rows.set(id, {
       id,
       name,
       instrument: instrument ?? "",
       status: r?.status ?? "ABSENT",
-      emailedAt: emailed instanceof Date ? emailed.toISOString() : emailed,
+      emailedAt: iso(r?.absenceEmailedAt),
+      checkedInAt: iso(r?.checkedInAt),
+      checkInFlags: flagsByContact.get(id) ?? [],
     });
   };
   for (const c of roster) add(c.id, c.name, c.instrument);
