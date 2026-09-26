@@ -104,7 +104,7 @@ export default async function SettingsPage() {
             <CardTitle>Attendance policy</CardTitle>
             <CardDescription>
               Who students email about a conflict, and which drum major is CC&apos;d. Quoted in every event reminder
-              and absence notice.
+              and absence notice. Also where QR check-in (beta) is turned on.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -113,6 +113,8 @@ export default async function SettingsPage() {
               contactEmail={policy?.absenceContactEmail ?? ""}
               ccUserId={policy?.absenceCcUserId ?? ""}
               leaders={leaders}
+              checkInEnabled={policy?.checkInEnabled ?? false}
+              checkInRadiusM={policy?.checkInRadiusM ?? 150}
             />
           </CardContent>
         </Card>

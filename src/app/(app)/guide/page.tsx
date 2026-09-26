@@ -15,6 +15,7 @@ const TOC = [
   ["#announce", "Sending announcements"],
   ["#events", "Events, reminders and the public calendar"],
   ["#attendance", "Taking attendance"],
+  ["#checkin", "QR check-in (beta)"],
   ["#music", "Adding music"],
   ["#handoff", "Handoff notes"],
 ] as const;
@@ -266,7 +267,56 @@ export default async function GuidePage() {
         </ol>
       </Section>
 
-      <Section id="music" title="8. Adding music">
+      <Section id="checkin" title="8. QR check-in (beta)">
+        <p>
+          Students can mark themselves present by scanning a code on a drum major&apos;s phone. It&apos;s a beta:
+          the sheet from section 7 still works exactly as before, and any tap there overrides a self check-in.
+        </p>
+        <ol>
+          <li>
+            An admin turns it on once under <em>Settings</em> → <em>Attendance policy</em> →{" "}
+            <em>QR check-in (beta)</em> and sets how far from the drum major a student may be (150 m by default).
+          </li>
+          <li>
+            On the day of the event, open the event&apos;s <strong>Attendance</strong> sheet, click{" "}
+            <strong>QR check-in (beta)</strong>, then <strong>Open check-in</strong> and allow location. Stand
+            where the band is: your phone&apos;s location becomes the center of the allowed area.
+          </li>
+          <li>
+            Show the code. It changes every 20 seconds, so a photo of it texted to someone at home stops working
+            almost at once. Students scan it, type their name <strong>exactly as on Google Classroom</strong>{" "}
+            (capitals, accents and apostrophes don&apos;t matter), share their location and tap{" "}
+            <strong>Check in</strong>. Names appear on your screen and on the sheet, with a QR icon, within a
+            second.
+          </li>
+          <li>
+            A student who typed the wrong name can tap <em>Edit</em> on the same phone to fix it; the mark moves.
+            A phone that checked in as one student can never check in as someone else at a later event.
+          </li>
+          <li>
+            Students are turned away (&ldquo;see a drum major&rdquo;) if they&apos;re too far away, their location
+            is imprecise, the name isn&apos;t on the event&apos;s list, or they try too many names. Mark those
+            students on the sheet by hand.
+          </li>
+          <li>
+            Some check-ins are let through with a badge for you to look at: <em>Duplicate name</em> (two phones
+            claimed the same student — one of them is probably a friend), <em>New phone</em> (this student used a
+            different phone before), <em>Edge of radius</em> and <em>Late scan</em> (more than 10 minutes after
+            the start time; the mark is still Present, so switch it to Late if that&apos;s your call).
+          </li>
+          <li>
+            <strong>Close check-in</strong> when roll call is over, or just <strong>Publish</strong> — publishing
+            closes it for good. It also closes itself at midnight.
+          </li>
+        </ol>
+        <p>
+          Limits worth knowing: location can be faked with enough effort, and a private/incognito tab looks like a
+          new phone. The flags exist so you can spot those; glancing at the names as they arrive is still the best
+          check.
+        </p>
+      </Section>
+
+      <Section id="music" title="9. Adding music">
         <ul>
           <li>
             <em>Library</em> → <strong>Add music</strong>. Pick the category (Concert Band, Jazz Band,
@@ -288,7 +338,7 @@ export default async function GuidePage() {
         </ul>
       </Section>
 
-      <Section id="handoff" title="9. Handoff notes">
+      <Section id="handoff" title="10. Handoff notes">
         <p>
           User menu → <em>Handoff</em>. Write what worked, what didn&apos;t, and tips for the next
           class. Do it during the year, not the week before graduation.

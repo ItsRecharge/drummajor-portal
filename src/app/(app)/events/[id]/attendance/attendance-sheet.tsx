@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Mail, Search, Users } from "lucide-react";
+import { Mail, QrCode, Search, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,6 +27,7 @@ import {
   type SheetSnapshot,
 } from "@/lib/attendance";
 import { todayUtcInZone } from "@/lib/event-schedule";
+import { CHECKIN_FLAG_LABELS, isCheckInFlag } from "@/lib/checkin-rules";
 import { markAllAction, markAttendanceAction, type MarkResult } from "./actions";
 import { PublishButton } from "./publish-button";
 
@@ -145,6 +148,14 @@ export function AttendanceSheet({
             <Users className="size-3.5" /> Also here: {others.join(", ")}
           </span>
         ) : null}
+        {base.checkIn.openedAt && !base.checkIn.closedAt ? (
+          <Link
+            href={`/events/${eventId}/attendance/checkin`}
+            className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <QrCode className="size-3.5" /> QR check-in open · {base.checkIn.count} checked in
+          </Link>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-3 py-2">
@@ -230,11 +241,22 @@ export function AttendanceSheet({
         {visible.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2">
             <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1.5 truncate font-medium">
-                {r.name}
+              <p className="flex flex-wrap items-center gap-1.5 font-medium">
+                <span className="truncate">{r.name}</span>
                 {r.emailedAt ? (
                   <Mail className="size-3.5 shrink-0 text-muted-foreground" aria-label="Absence email sent" />
                 ) : null}
+                {r.checkedInAt ? (
+                  <QrCode
+                    className="size-3.5 shrink-0 text-muted-foreground"
+                    aria-label={`Checked in by QR at ${formatTime(r.checkedInAt)}`}
+                  />
+                ) : null}
+                {r.checkInFlags.map((f) => (
+                  <Badge key={f} variant="outline" className="h-4 px-1.5 text-[10px]">
+                    {isCheckInFlag(f) ? CHECKIN_FLAG_LABELS[f] : f}
+                  </Badge>
+                ))}
               </p>
               {r.instrument ? <p className="truncate text-xs text-muted-foreground">{r.instrument}</p> : null}
             </div>

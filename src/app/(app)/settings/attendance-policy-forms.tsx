@@ -26,11 +26,15 @@ export function AttendancePolicySettings({
   contactEmail,
   ccUserId,
   leaders,
+  checkInEnabled,
+  checkInRadiusM,
 }: {
   contactName: string;
   contactEmail: string;
   ccUserId: string;
   leaders: CcOption[];
+  checkInEnabled: boolean;
+  checkInRadiusM: number;
 }) {
   const [state, action] = useActionState(saveAttendancePolicyAction, emptyState);
   useToast(state);
@@ -85,10 +89,39 @@ export function AttendancePolicySettings({
         . Unless it is a genuine emergency, every conflict must be cleared at least 3 days ahead of time or a cut
         will be recorded.&rdquo;
       </p>
+      <fieldset className="grid gap-3 rounded-lg border p-4">
+        <legend className="px-1 text-sm font-medium">QR check-in (beta)</legend>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="checkInEnabled"
+            defaultChecked={checkInEnabled}
+            className="mt-0.5 size-4 shrink-0 accent-primary"
+          />
+          <span>
+            Let students check themselves in by scanning a QR code on the day of the event. A drum major opens
+            check-in from the sheet; the code changes every 20 seconds.
+          </span>
+        </label>
+        <div className="sm:max-w-xs">
+          <Field
+            label="Allowed distance from the drum major's phone (metres)"
+            name="checkInRadiusM"
+            type="number"
+            defaultValue={checkInRadiusM}
+            error={state.fieldErrors?.checkInRadiusM}
+            required
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Phones reporting worse than ±200 m accuracy are told to turn on precise location. Duplicate names, new
+          phones, edge-of-radius and late scans are flagged on the sheet for you to review.
+        </p>
+      </fieldset>
       <div>
         <SubmitButton pendingLabel="Saving…">
           <Save data-icon="inline-start" />
-          Save conflict contacts
+          Save attendance policy
         </SubmitButton>
       </div>
     </form>

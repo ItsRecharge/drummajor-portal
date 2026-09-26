@@ -14,6 +14,8 @@ import { getBandName } from "@/lib/leadership";
 import { getConflictPolicy } from "@/lib/attendance-policy";
 import { appealDecisionEmail } from "@/lib/absence-emails";
 import { todayUtcInZone } from "@/lib/event-schedule";
+import { checkInAnchorSchema } from "@/lib/validation";
+import { closeCheckIn, loadCheckInSession, openCheckIn, type CheckInSession } from "@/lib/checkin-data";
 import { AppealStatus, EventAudience, Role, type Event } from "@/generated/prisma/client";
 import { formatEventWhen } from "../../event-dates";
 
@@ -156,6 +158,11 @@ export async function publishAttendanceAction(eventId: string): Promise<ActionSt
 
   const updated = await prisma.$transaction(async (tx) => {
     if (missing.length) await tx.attendanceRecord.createMany({ data: missing, skipDuplicates: true });
+    // Publishing ends QR check-in for the event.
+    await tx.event.updateMany({
+      where: { id: eventId, checkInOpenedAt: { not: null }, checkInClosedAt: null },
+      data: { checkInClosedAt: now },
+    });
     return tx.event.updateMany({
       where: { id: eventId, attendancePublishedAt: null },
       data: { attendancePublishedAt: now, attendancePublishedById: actor.id },
@@ -182,4 +189,45 @@ export async function publishAttendanceAction(eventId: string): Promise<ActionSt
     success: true,
     message: `Published — ${counts.absent} absence email${counts.absent === 1 ? "" : "s"} going out.`,
   };
+}
+
+// ---------------------------------------------------------------------------
+// QR self check-in (beta): open/close from the drum major's QR page. Opening
+// captures their phone as the geofence anchor. Like taps, no revalidatePath —
+// the sheet and the QR page learn about it over the live stream.
+// ---------------------------------------------------------------------------
+
+export type CheckInActionResult = { ok: true; session: CheckInSession } | { ok: false; error: string };
+
+async function finishCheckIn(eventId: string): Promise<CheckInActionResult> {
+  await broadcastSheet(eventId);
+  const session = await loadCheckInSession(eventId);
+  return session ? { ok: true, session } : { ok: false, error: "Event not found." };
+}
+
+export async function openCheckInAction(
+  eventId: string,
+  anchor: { lat: number; lng: number; accuracyM: number },
+): Promise<CheckInActionResult> {
+  const { user: actor } = await requireRole(...SHEET_ROLES);
+  const event = await loadBandEvent(eventId);
+  if (!event) return { ok: false, error: "Event not found." };
+  const parsed = checkInAnchorSchema.safeParse(anchor);
+  if (!parsed.success) return { ok: false, error: "That location doesn't look right. Try again." };
+  const r = await openCheckIn(eventId, actor.id, parsed.data);
+  if (!r.ok) return r;
+  await logAudit({ actorId: actor.id, action: "CHECKIN_OPENED", target: event.title, metadata: { ...parsed.data } });
+  return finishCheckIn(eventId);
+}
+
+export async function closeCheckInAction(eventId: string): Promise<CheckInActionResult> {
+  const { user: actor } = await requireRole(...SHEET_ROLES);
+  const event = await loadBandEvent(eventId);
+  if (!event) return { ok: false, error: "Event not found." };
+  const wasOpen = await closeCheckIn(eventId);
+  if (wasOpen) {
+    const checkIns = await prisma.checkIn.count({ where: { eventId } });
+    await logAudit({ actorId: actor.id, action: "CHECKIN_CLOSED", target: event.title, metadata: { checkIns } });
+  }
+  return finishCheckIn(eventId);
 }

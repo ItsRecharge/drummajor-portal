@@ -155,6 +155,38 @@ export const attendancePolicySchema = z.object({
   absenceContactEmail: optionalEmail,
   // A portal user id (drum major or admin) to CC; blank = nobody yet.
   absenceCcUserId: z.string().optional(),
+  // QR check-in (beta): checkbox + metres from the drum major's phone.
+  checkInEnabled: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
+  checkInRadiusM: z.coerce.number().int("Whole metres").min(25, "At least 25 m").max(2000, "At most 2000 m"),
+});
+
+// QR check-in: the drum major's anchor (JSON from the browser, not a form).
+export const checkInAnchorSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  accuracyM: z.number().min(0).max(100_000),
+});
+
+// A coordinate posted as a hidden form field; blank = the browser gave no fix.
+const coordinate = (min: number, max: number) =>
+  z.preprocess(
+    (v) => (typeof v === "string" && v.trim() !== "" ? Number(v) : undefined),
+    z.number({ error: "Share your location to check in." }).min(min).max(max),
+  );
+
+// QR check-in: the student's submission.
+export const checkInSubmitSchema = z.object({
+  eventId: z.string().min(1),
+  ticket: z.string().min(1),
+  name: z.string().trim().min(1, "Enter your name").max(100, "That's too long"),
+  lat: coordinate(-90, 90),
+  lng: coordinate(-180, 180),
+  accuracyM: coordinate(0, 100_000),
+  // localStorage mirror of the dm_device cookie (sha-256-shaped hex or nothing).
+  deviceHint: z.preprocess(
+    (v) => (typeof v === "string" && /^[a-f0-9]{64}$/.test(v) ? v : undefined),
+    z.string().optional(),
+  ),
 });
 
 // Public absence appeal (the student's personal link + a short reason).

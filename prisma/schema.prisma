@@ -51,6 +51,10 @@ model AppSettings {
   absenceContactEmail String?
   absenceCcUserId     String?
   absenceCcUser       User?    @relation("AbsenceCc", fields: [absenceCcUserId], references: [id], onDelete: SetNull)
+  // QR self check-in (beta): admin toggle and how far (metres) a student may
+  // be from the drum major's phone. See src/lib/checkin-rules.ts.
+  checkInEnabled   Boolean  @default(false)
+  checkInRadiusM   Int      @default(150)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
@@ -89,6 +93,7 @@ model User {
   handoffNotes      HandoffNote[]
   eventsCreated     Event[]             @relation("EventCreator")
   publishedSheets   Event[]             @relation("AttendancePublisher")
+  openedCheckIns    Event[]             @relation("CheckInOpener")
   notifications     Notification[]
   auditEntries      AuditLog[]
   securityEntries   SecurityLog[]       @relation("ActorSecurity")
@@ -163,6 +168,7 @@ model Contact {
   updatedAt  DateTime       @updatedAt
   groups     ContactGroup[]
   attendance AttendanceRecord[]
+  checkIns   CheckIn[]
 }
 
 model Group {
@@ -388,6 +394,19 @@ model Event {
   attendancePublishedBy   User?  @relation("AttendancePublisher", fields: [attendancePublishedById], references: [id], onDelete: SetNull)
   attendance        AttendanceRecord[]
   notices           EventNotice[]
+  // QR self check-in session: open while checkInOpenedAt is set and
+  // checkInClosedAt is null (Publish closes it). The anchor is the drum
+  // major's phone when they opened it; the radius is a snapshot of the
+  // setting at that moment.
+  checkInOpenedAt   DateTime?
+  checkInClosedAt   DateTime?
+  checkInOpenedById String?
+  checkInOpenedBy   User?     @relation("CheckInOpener", fields: [checkInOpenedById], references: [id], onDelete: SetNull)
+  checkInLat        Float?
+  checkInLng        Float?
+  checkInAccuracyM  Float?
+  checkInRadiusM    Int?
+  checkIns          CheckIn[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -427,6 +446,8 @@ model AttendanceRecord {
   absenceEmailedAt DateTime?
   appealToken      String?        @unique
   appeal           AbsenceAppeal?
+  // Set when the student checked themselves in by QR (src/lib/checkin-data.ts).
+  checkedInAt      DateTime?
 
   @@id([eventId, contactId])
   @@index([contactId])
@@ -454,6 +475,35 @@ model AbsenceAppeal {
 
   @@unique([eventId, contactId])
   @@index([status])
+}
+
+// One QR self check-in per phone per event. deviceId is the sha256 of the
+// random token in the student's dm_device cookie; the raw token is never
+// stored. A phone's history across events is what binds it to one student
+// (see checkDeviceBinding in src/lib/checkin-rules.ts).
+model CheckIn {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  deviceId  String
+  typedName String
+  lat       Float
+  lng       Float
+  accuracyM Float
+  distanceM Float
+  // DUP_NAME | NEW_DEVICE | EDGE | LATE — review hints, never rejections.
+  flags     String[] @default([])
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, deviceId])
+  @@index([eventId, contactId])
+  @@index([contactId])
+  @@index([deviceId])
 }
 
 // ---------------------------------------------------------------------------
