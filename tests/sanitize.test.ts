@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sanitizeHtml, absolutizeImageSrc } from "../src/lib/sanitize.ts";
+import { sanitizeHtml, absolutizeImageSrc, keepBlankLines } from "../src/lib/sanitize.ts";
 
 test("keeps img with app-hosted src, strips other attributes", () => {
   assert.equal(
@@ -52,4 +52,10 @@ test("absolutizeImageSrc rewrites only app-relative /i/ srcs", () => {
     ),
     '<img src="https://portal.example.com/i/abc" /><img src="https://x.com/y.png" />',
   );
+});
+
+test("keeps blank lines: empty paragraphs become <p><br></p>", () => {
+  assert.equal(sanitizeHtml("<p>a</p><p></p><p>b</p>"), "<p>a</p><p><br></p><p>b</p>");
+  assert.equal(keepBlankLines("<p>a</p><p> </p><p>b</p>"), "<p>a</p><p><br></p><p>b</p>");
+  assert.equal(keepBlankLines("<p><br></p>"), "<p><br></p>");
 });

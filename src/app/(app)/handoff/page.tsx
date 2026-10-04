@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { keepBlankLines } from "@/lib/sanitize";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { Role } from "@/generated/prisma/client";
@@ -105,8 +106,8 @@ export default async function HandoffPage() {
                       ) : null}
                     </div>
                     <div
-                      className="prose prose-sm max-w-none text-sm [&_a]:underline"
-                      dangerouslySetInnerHTML={{ __html: n.bodyHtml }}
+                      className="max-w-none text-sm [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:underline"
+                      dangerouslySetInnerHTML={{ __html: keepBlankLines(n.bodyHtml) }}
                     />
                     {n.author ? (
                       <p className="text-xs text-muted-foreground">— {n.author.name}</p>

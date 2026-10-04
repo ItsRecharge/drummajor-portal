@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { keepBlankLines } from "@/lib/sanitize";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
@@ -54,8 +55,8 @@ export default async function AnnouncementDetailPage({
         </CardHeader>
         <CardContent>
           <div
-            className="prose prose-sm max-w-none text-sm"
-            dangerouslySetInnerHTML={{ __html: ann.bodyHtml }}
+            className="max-w-none text-sm [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:underline"
+            dangerouslySetInnerHTML={{ __html: keepBlankLines(ann.bodyHtml) }}
           />
         </CardContent>
       </Card>

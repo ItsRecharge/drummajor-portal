@@ -69,7 +69,13 @@ export function sanitizeHtml(input: string): string {
     return `<${name}>`;
   });
 
-  return html.trim();
+  return keepBlankLines(html.trim());
+}
+
+// The editor saves a blank line as an empty <p></p>, which browsers and email
+// clients render at zero height. A <br> inside gives it one line of height.
+export function keepBlankLines(html: string): string {
+  return html.replace(/<p>\s*<\/p>/g, "<p><br></p>");
 }
 
 // Rewrite app-relative inline-image srcs ("/i/<id>") to absolute URLs so emails
