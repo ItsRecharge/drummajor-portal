@@ -251,6 +251,9 @@ model EmailDelivery {
   sentAt         DateTime?
   openedAt       DateTime?
   error          String?
+  // Temporary SMTP errors are retried: tries so far, and when the next is due.
+  attempts       Int      @default(0)
+  nextAttemptAt  DateTime?
 
   @@index([announcementId])
 }

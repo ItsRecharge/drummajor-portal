@@ -29,10 +29,14 @@ export default async function AnnouncementDetailPage({
   });
   if (!ann) notFound();
 
-  const [total, sent, opened] = await Promise.all([
+  const [total, sent, opened, failed, retrying] = await Promise.all([
     prisma.emailDelivery.count({ where: { announcementId: id } }),
     prisma.emailDelivery.count({ where: { announcementId: id, sentAt: { not: null } } }),
     prisma.emailDelivery.count({ where: { announcementId: id, openedAt: { not: null } } }),
+    prisma.emailDelivery.count({ where: { announcementId: id, error: { not: null } } }),
+    prisma.emailDelivery.count({
+      where: { announcementId: id, sentAt: null, error: null, nextAttemptAt: { not: null } },
+    }),
   ]);
 
   const isAdmin = user.role === Role.ADMIN;
@@ -70,7 +74,22 @@ export default async function AnnouncementDetailPage({
             Recipients: <strong>{total}</strong> · Sent: <strong>{sent}</strong> · Opened:{" "}
             <strong>{opened}</strong>
             {total > 0 ? ` (${opened}/${total})` : ""}
+            {retrying > 0 ? (
+              <>
+                {" "}· Retrying: <strong>{retrying}</strong>
+              </>
+            ) : null}
+            {failed > 0 ? (
+              <>
+                {" "}· Failed: <strong className="text-destructive">{failed}</strong>
+              </>
+            ) : null}
           </p>
+          {retrying > 0 ? (
+            <p className="text-muted-foreground">
+              Gmail asked us to slow down, so some emails are waiting a few minutes and will be retried automatically.
+            </p>
+          ) : null}
           <p className="text-muted-foreground">
             Groups: {ann.recipientGroups.map((r) => r.group.name).join(", ") || "—"}
           </p>
