@@ -95,7 +95,7 @@ export default async function AnnouncementDetailPage({
           ) : null}
           {retrying > 0 ? (
             <p className="text-muted-foreground">
-              Gmail asked us to slow down, so some emails are waiting a few minutes and will be retried automatically.
+              Some emails didn’t go through on the first try. They’ll be retried automatically in a few minutes.
             </p>
           ) : null}
           <p className="text-muted-foreground">
