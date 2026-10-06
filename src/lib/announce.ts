@@ -89,6 +89,23 @@ export async function approveAnnouncement(announcementId: string): Promise<void>
   });
 }
 
+// Re-queue the deliveries that failed for good so the worker tries them again.
+// Recipients who already got the email are untouched, so nobody gets a second copy.
+// Returns how many were re-queued.
+export async function retryFailedDeliveries(announcementId: string): Promise<number> {
+  const { count } = await prisma.emailDelivery.updateMany({
+    where: { announcementId, sentAt: null, error: { not: null } },
+    data: { error: null, attempts: 0, nextAttemptAt: null },
+  });
+  if (count > 0) {
+    await prisma.announcement.update({
+      where: { id: announcementId },
+      data: { status: AnnouncementStatus.SENDING },
+    });
+  }
+  return count;
+}
+
 type MusicAttachments = {
   files: { filename: string; content: Buffer }[];
   linksHtml: string;

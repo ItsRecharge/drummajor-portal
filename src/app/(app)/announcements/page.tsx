@@ -78,6 +78,12 @@ export default async function AnnouncementsPage() {
     _count: { _all: true },
   });
   const opened = new Map(openedRows.map((r) => [r.announcementId, r._count._all]));
+  const failedRows = await prisma.emailDelivery.groupBy({
+    by: ["announcementId"],
+    where: { sentAt: null, error: { not: null } },
+    _count: { _all: true },
+  });
+  const failed = new Map(failedRows.map((r) => [r.announcementId, r._count._all]));
 
   const drafts = announcements.filter((a) => a.status === AnnouncementStatus.DRAFT);
   const scheduled = announcements
@@ -99,6 +105,7 @@ export default async function AnnouncementsPage() {
               : ""}
             {a.sentAt && a.status === AnnouncementStatus.SENT ? ` · sent ${a.sentAt.toLocaleDateString()}` : ""}
             {a._count.deliveries > 0 ? ` · Opened ${opened.get(a.id) ?? 0}/${a._count.deliveries}` : ""}
+            {failed.get(a.id) ? <span className="text-destructive"> · {failed.get(a.id)} failed</span> : null}
           </p>
         </Link>
         <div className="flex shrink-0 items-center gap-2">{right}</div>
