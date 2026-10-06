@@ -7,7 +7,7 @@ import { getLeadershipEmails } from "@/lib/leadership";
 import { shareAnyoneWithLink, isDriveConfigured } from "@/lib/drive";
 import { absolutizeImageSrc, escapeHtml, keepBlankLines } from "@/lib/sanitize";
 
-import { MAIL_BATCH_SIZE, MAIL_SPACING_MS, MAX_ATTEMPTS, isTransientSmtpError, retryDelayMs } from "@/lib/mail-retry";
+import { MAIL_BATCH_SIZE, MAIL_SPACING_MS, failureStep, isTransientSmtpError } from "@/lib/mail-retry";
 
 // The cron tick fires every minute even if the last batch is still going; the
 // flag (on globalThis so separate server bundles share it) keeps ticks from
@@ -140,6 +140,7 @@ async function buildMusicAttachments(announcementId: string): Promise<MusicAttac
 // deliveries, marking an announcement SENT once every delivery has been sent or
 // has failed for good. A temporary SMTP error (Gmail throttling) reschedules
 // that delivery with backoff and ends the tick, so the rest wait instead of failing.
+// Anything that would be recorded as failed gets one more try five minutes later.
 export async function processQueue(): Promise<void> {
   if (lock.__dmpQueueRunning) return;
   lock.__dmpQueueRunning = true;
@@ -226,17 +227,19 @@ async function runQueue(): Promise<void> {
           });
           await prisma.emailDelivery.update({ where: { id: d.id }, data: { sentAt: new Date() } });
         } catch (err) {
-          const attempts = d.attempts + 1;
           const message = (err as Error).message.slice(0, 500);
-          if (isTransientSmtpError(err) && attempts < MAX_ATTEMPTS) {
+          const transient = isTransientSmtpError(err);
+          const step = failureStep(d.attempts, transient);
+          if (step.kind === "retry") {
             await prisma.emailDelivery.update({
               where: { id: d.id },
-              data: { attempts, nextAttemptAt: new Date(Date.now() + retryDelayMs(attempts)) },
+              data: { attempts: step.attempts, nextAttemptAt: new Date(Date.now() + step.delayMs) },
             });
-            console.warn(`[announce] ${d.recipientEmail}: temporary error (try ${attempts}), retrying later: ${message}`);
-            return; // Gmail is pushing back — stop this tick, resume next minute.
+            console.warn(`[announce] ${d.recipientEmail}: send failed (try ${d.attempts + 1}), retrying later: ${message}`);
+          } else {
+            await prisma.emailDelivery.update({ where: { id: d.id }, data: { attempts: step.attempts, error: message } });
           }
-          await prisma.emailDelivery.update({ where: { id: d.id }, data: { attempts, error: message } });
+          if (transient) return; // Gmail is pushing back — stop this tick, resume next minute.
         }
         await sleep(MAIL_SPACING_MS);
       }
