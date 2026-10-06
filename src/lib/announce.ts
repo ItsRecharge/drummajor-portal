@@ -1,18 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { AnnouncementStatus } from "@/generated/prisma/client";
-import { getSmtpConfig, buildTransport, fromHeader, announcementEmail, appBaseUrl } from "@/lib/email";
+import { getSmtpConfig, buildBatchTransport, fromHeader, announcementEmail, appBaseUrl } from "@/lib/email";
 import { randomToken, isExpired } from "@/lib/tokens";
 import { resolveGroupMemberIds } from "@/lib/groups";
 import { getLeadershipEmails } from "@/lib/leadership";
 import { shareAnyoneWithLink, isDriveConfigured } from "@/lib/drive";
 import { absolutizeImageSrc, escapeHtml, keepBlankLines } from "@/lib/sanitize";
 
-// How many recipients to send per scheduler tick. With a 1-minute tick this paces
-// delivery (a full ~150-person send finishes over a few minutes) and stays well
-// under Gmail's per-message throttling.
-const BATCH_PER_TICK = 40;
-// Small delay between messages within a tick — "a few per second".
-const SEND_SPACING_MS = 250;
+import { MAIL_BATCH_SIZE, MAIL_SPACING_MS, MAX_ATTEMPTS, isTransientSmtpError, retryDelayMs } from "@/lib/mail-retry";
+
+// The cron tick fires every minute even if the last batch is still going; the
+// flag (on globalThis so separate server bundles share it) keeps ticks from
+// overlapping, which would send the same rows twice over two Gmail logins.
+const lock = globalThis as unknown as { __dmpQueueRunning?: boolean };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -89,6 +89,23 @@ export async function approveAnnouncement(announcementId: string): Promise<void>
   });
 }
 
+// Re-queue the deliveries that failed for good so the worker tries them again.
+// Recipients who already got the email are untouched, so nobody gets a second copy.
+// Returns how many were re-queued.
+export async function retryFailedDeliveries(announcementId: string): Promise<number> {
+  const { count } = await prisma.emailDelivery.updateMany({
+    where: { announcementId, sentAt: null, error: { not: null } },
+    data: { error: null, attempts: 0, nextAttemptAt: null },
+  });
+  if (count > 0) {
+    await prisma.announcement.update({
+      where: { id: announcementId },
+      data: { status: AnnouncementStatus.SENDING },
+    });
+  }
+  return count;
+}
+
 type MusicAttachments = {
   files: { filename: string; content: Buffer }[];
   linksHtml: string;
@@ -119,9 +136,21 @@ async function buildMusicAttachments(announcementId: string): Promise<MusicAttac
 }
 
 // Idempotent, restart-safe queue worker. Promotes due scheduled announcements,
-// then sends a throttled batch of unsent deliveries for each SENDING announcement,
-// marking the announcement SENT once every delivery has been attempted.
+// then sends one batch (MAIL_BATCH_SIZE across all announcements) of due
+// deliveries, marking an announcement SENT once every delivery has been sent or
+// has failed for good. A temporary SMTP error (Gmail throttling) reschedules
+// that delivery with backoff and ends the tick, so the rest wait instead of failing.
 export async function processQueue(): Promise<void> {
+  if (lock.__dmpQueueRunning) return;
+  lock.__dmpQueueRunning = true;
+  try {
+    await runQueue();
+  } finally {
+    lock.__dmpQueueRunning = false;
+  }
+}
+
+async function runQueue(): Promise<void> {
   const now = new Date();
 
   await prisma.announcement.updateMany({
@@ -131,62 +160,88 @@ export async function processQueue(): Promise<void> {
 
   const sending = await prisma.announcement.findMany({
     where: { status: AnnouncementStatus.SENDING },
+    orderBy: { createdAt: "asc" },
   });
   if (sending.length === 0) return;
 
   const cfg = await getSmtpConfig();
+  // One connection (one Gmail login) per tick, shared by every announcement.
+  const transport = cfg ? buildBatchTransport(cfg) : null;
+  let budget = MAIL_BATCH_SIZE;
 
-  for (const ann of sending) {
-    const pending = await prisma.emailDelivery.findMany({
-      where: { announcementId: ann.id, sentAt: null, error: null },
-      take: BATCH_PER_TICK,
-    });
-
-    if (pending.length === 0) {
-      const failures = await prisma.emailDelivery.count({
-        where: { announcementId: ann.id, error: { not: null } },
-        });
-      const total = await prisma.emailDelivery.count({ where: { announcementId: ann.id } });
-      await prisma.announcement.update({
-        where: { id: ann.id },
-        data: {
-          status: failures === total && total > 0 ? AnnouncementStatus.FAILED : AnnouncementStatus.SENT,
-          sentAt: ann.sentAt ?? new Date(),
-        },
+  try {
+    for (const ann of sending) {
+      const unfinished = await prisma.emailDelivery.count({
+        where: { announcementId: ann.id, sentAt: null, error: null },
       });
-      continue;
-    }
 
-    // Can't send without SMTP — leave deliveries pending for a later tick.
-    if (!cfg) continue;
-
-    const transport = buildTransport(cfg);
-    const music = await buildMusicAttachments(ann.id);
-    const org = await prisma.organization.findFirst({ select: { bandName: true } });
-
-    for (const d of pending) {
-      try {
-        const html = announcementEmail({
-          bodyHtml: absolutizeImageSrc(keepBlankLines(ann.bodyHtml), appBaseUrl()),
-          pixelUrl: `${appBaseUrl()}/t/${d.trackingToken}.gif`,
-          linksHtml: music.linksHtml,
-          bandName: org?.bandName,
+      if (unfinished === 0) {
+        const failures = await prisma.emailDelivery.count({
+          where: { announcementId: ann.id, error: { not: null } },
         });
-        await transport.sendMail({
-          from: fromHeader(cfg),
-          to: d.recipientEmail,
-          subject: ann.subject,
-          html,
-          attachments: music.files,
+        const total = await prisma.emailDelivery.count({ where: { announcementId: ann.id } });
+        await prisma.announcement.update({
+          where: { id: ann.id },
+          data: {
+            status: failures === total && total > 0 ? AnnouncementStatus.FAILED : AnnouncementStatus.SENT,
+            sentAt: ann.sentAt ?? new Date(),
+          },
         });
-        await prisma.emailDelivery.update({ where: { id: d.id }, data: { sentAt: new Date() } });
-      } catch (err) {
-        await prisma.emailDelivery.update({
-          where: { id: d.id },
-          data: { error: (err as Error).message.slice(0, 500) },
-        });
+        continue;
       }
-      await sleep(SEND_SPACING_MS);
+
+      // Can't send without SMTP, or this tick's batch is used up — later tick.
+      if (!cfg || !transport || budget <= 0) continue;
+
+      const due = await prisma.emailDelivery.findMany({
+        where: {
+          announcementId: ann.id,
+          sentAt: null,
+          error: null,
+          OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+        },
+        orderBy: { id: "asc" },
+        take: budget,
+      });
+      if (due.length === 0) continue;
+
+      const music = await buildMusicAttachments(ann.id);
+      const org = await prisma.organization.findFirst({ select: { bandName: true } });
+      const bodyHtml = absolutizeImageSrc(keepBlankLines(ann.bodyHtml), appBaseUrl());
+
+      for (const d of due) {
+        budget--;
+        try {
+          await transport.sendMail({
+            from: fromHeader(cfg),
+            to: d.recipientEmail,
+            subject: ann.subject,
+            html: announcementEmail({
+              bodyHtml,
+              pixelUrl: `${appBaseUrl()}/t/${d.trackingToken}.gif`,
+              linksHtml: music.linksHtml,
+              bandName: org?.bandName,
+            }),
+            attachments: music.files,
+          });
+          await prisma.emailDelivery.update({ where: { id: d.id }, data: { sentAt: new Date() } });
+        } catch (err) {
+          const attempts = d.attempts + 1;
+          const message = (err as Error).message.slice(0, 500);
+          if (isTransientSmtpError(err) && attempts < MAX_ATTEMPTS) {
+            await prisma.emailDelivery.update({
+              where: { id: d.id },
+              data: { attempts, nextAttemptAt: new Date(Date.now() + retryDelayMs(attempts)) },
+            });
+            console.warn(`[announce] ${d.recipientEmail}: temporary error (try ${attempts}), retrying later: ${message}`);
+            return; // Gmail is pushing back — stop this tick, resume next minute.
+          }
+          await prisma.emailDelivery.update({ where: { id: d.id }, data: { attempts, error: message } });
+        }
+        await sleep(MAIL_SPACING_MS);
+      }
     }
+  } finally {
+    transport?.close();
   }
 }

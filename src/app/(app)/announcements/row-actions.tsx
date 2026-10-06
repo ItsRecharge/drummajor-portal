@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil, Trash2, CalendarX } from "lucide-react";
+import { Pencil, Trash2, CalendarX, RotateCw } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -14,7 +14,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { SubmitButton } from "@/components/submit-button";
-import { cancelScheduledAction, deleteAnnouncementAction } from "./actions";
+import { cancelScheduledAction, deleteAnnouncementAction, retryFailedAction } from "./actions";
 
 // Per-row controls for drafts (edit/delete) and scheduled sends (cancel).
 export function DraftActions({ id, subject }: { id: string; subject: string }) {
@@ -69,6 +69,35 @@ export function CancelScheduledButton({ id, subject }: { id: string; subject: st
             <SubmitButton variant="destructive" pendingLabel="Cancelling…">
               Cancel send
             </SubmitButton>
+          </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+// Re-sends a finished announcement to only the recipients it didn't reach.
+export function RetryFailedButton({ id, subject, count }: { id: string; subject: string; count: number }) {
+  const people = count === 1 ? "1 person" : `${count} people`;
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger render={<Button variant="outline" />}>
+        <RotateCw data-icon="inline-start" />
+        Retry {count} unsent
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Retry the unsent emails?</AlertDialogTitle>
+          <AlertDialogDescription>
+            “{subject}” will be sent again to the {people} it didn’t reach. Anyone who already got it won’t get a
+            second copy.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <form action={retryFailedAction}>
+          <input type="hidden" name="announcementId" value={id} />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not now</AlertDialogCancel>
+            <SubmitButton pendingLabel="Retrying…">Retry {people}</SubmitButton>
           </AlertDialogFooter>
         </form>
       </AlertDialogContent>

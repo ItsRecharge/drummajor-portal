@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { parseForm, type ActionState } from "@/lib/form";
 import { announcementSchema, templateSchema } from "@/lib/validation";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { enqueueAnnouncement, approveAnnouncement } from "@/lib/announce";
+import { enqueueAnnouncement, approveAnnouncement, retryFailedDeliveries, processQueue } from "@/lib/announce";
 import { notifyAll } from "@/lib/notify";
 import { Role, AnnouncementStatus } from "@/generated/prisma/client";
 
@@ -145,6 +146,25 @@ export async function cancelScheduledAction(formData: FormData): Promise<void> {
   revalidatePath("/announcements");
   revalidatePath(`/announcements/${id}`);
   redirect("/announcements");
+}
+
+// Send a finished announcement again to just the recipients it didn't reach
+// (deliveries that failed for good). Kicks the queue right away instead of
+// waiting for the next minute tick.
+export async function retryFailedAction(formData: FormData): Promise<void> {
+  const { user: actor } = await requireRole(...COMPOSE_ROLES);
+  const id = String(formData.get("announcementId") ?? "");
+  const existing = await prisma.announcement.findUnique({ where: { id }, select: { status: true } });
+  const finished: AnnouncementStatus[] = [AnnouncementStatus.SENT, AnnouncementStatus.FAILED];
+  if (existing && finished.includes(existing.status)) {
+    const recipients = await retryFailedDeliveries(id);
+    if (recipients > 0) {
+      await logAudit({ actorId: actor.id, action: "ANNOUNCEMENT_RETRIED", target: id, metadata: { recipients } });
+      after(() => processQueue().catch((err) => console.error("[announcements] retry send failed:", err)));
+    }
+  }
+  revalidatePath("/announcements");
+  revalidatePath(`/announcements/${id}`);
 }
 
 export async function saveTemplateAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

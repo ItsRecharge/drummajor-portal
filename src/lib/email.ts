@@ -33,6 +33,20 @@ export function buildTransport(cfg: SmtpConfig) {
   });
 }
 
+// For batches: a plain transport opens a new connection (a new Gmail login) for
+// every message, and Gmail throttles bursts of logins. This keeps one
+// connection open and reuses it. Call close() when the batch is done.
+export function buildBatchTransport(cfg: SmtpConfig) {
+  return nodemailer.createTransport({
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.port === 465,
+    auth: { user: cfg.user, pass: cfg.appPassword },
+    pool: true,
+    maxConnections: 1,
+  });
+}
+
 export function fromHeader(cfg: SmtpConfig): string {
   return `"${cfg.fromName ?? "Drum Major Portal"}" <${cfg.user}>`;
 }

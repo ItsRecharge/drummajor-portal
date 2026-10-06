@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { statusLabel } from "../status";
 import { approveAction } from "../actions";
-import { DraftActions, CancelScheduledButton } from "../row-actions";
+import { DraftActions, CancelScheduledButton, RetryFailedButton } from "../row-actions";
 
 export default async function AnnouncementDetailPage({
   params,
@@ -29,13 +29,19 @@ export default async function AnnouncementDetailPage({
   });
   if (!ann) notFound();
 
-  const [total, sent, opened] = await Promise.all([
+  const [total, sent, opened, failed, retrying] = await Promise.all([
     prisma.emailDelivery.count({ where: { announcementId: id } }),
     prisma.emailDelivery.count({ where: { announcementId: id, sentAt: { not: null } } }),
     prisma.emailDelivery.count({ where: { announcementId: id, openedAt: { not: null } } }),
+    prisma.emailDelivery.count({ where: { announcementId: id, error: { not: null } } }),
+    prisma.emailDelivery.count({
+      where: { announcementId: id, sentAt: null, error: null, nextAttemptAt: { not: null } },
+    }),
   ]);
 
   const isAdmin = user.role === Role.ADMIN;
+  const canRetry =
+    failed > 0 && (ann.status === AnnouncementStatus.SENT || ann.status === AnnouncementStatus.FAILED);
 
   return (
     <div className="grid gap-6">
@@ -70,7 +76,28 @@ export default async function AnnouncementDetailPage({
             Recipients: <strong>{total}</strong> · Sent: <strong>{sent}</strong> · Opened:{" "}
             <strong>{opened}</strong>
             {total > 0 ? ` (${opened}/${total})` : ""}
+            {retrying > 0 ? (
+              <>
+                {" "}· Retrying: <strong>{retrying}</strong>
+              </>
+            ) : null}
+            {failed > 0 ? (
+              <>
+                {" "}· Failed: <strong className="text-destructive">{failed}</strong>
+              </>
+            ) : null}
           </p>
+          {canRetry ? (
+            <p className="text-destructive">
+              {failed === 1 ? "1 email" : `${failed} emails`} didn’t go through. Use Retry below to send to just those
+              people.
+            </p>
+          ) : null}
+          {retrying > 0 ? (
+            <p className="text-muted-foreground">
+              Gmail asked us to slow down, so some emails are waiting a few minutes and will be retried automatically.
+            </p>
+          ) : null}
           <p className="text-muted-foreground">
             Groups: {ann.recipientGroups.map((r) => r.group.name).join(", ") || "—"}
           </p>
@@ -92,6 +119,7 @@ export default async function AnnouncementDetailPage({
             <Button type="submit">Approve &amp; release</Button>
           </form>
         ) : null}
+        {canRetry ? <RetryFailedButton id={ann.id} subject={ann.subject} count={failed} /> : null}
         {ann.status === AnnouncementStatus.DRAFT ? <DraftActions id={ann.id} subject={ann.subject} /> : null}
         {ann.status === AnnouncementStatus.SCHEDULED || ann.status === AnnouncementStatus.PENDING_APPROVAL ? (
           <CancelScheduledButton id={ann.id} subject={ann.subject} />

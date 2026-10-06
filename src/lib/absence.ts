@@ -3,7 +3,8 @@
 // emails anyone. Runs on the every-minute tick and right after a publish;
 // failures are retried on a later tick.
 import { prisma } from "@/lib/prisma";
-import { appBaseUrl, getSmtpConfig, sendMail } from "@/lib/email";
+import { appBaseUrl, buildBatchTransport, fromHeader, getSmtpConfig } from "@/lib/email";
+import { MAIL_BATCH_SIZE, MAIL_SPACING_MS, isTransientSmtpError } from "@/lib/mail-retry";
 import { getBandName } from "@/lib/leadership";
 import { randomToken } from "@/lib/tokens";
 import { absenceEmail } from "@/lib/absence-emails";
@@ -11,9 +12,6 @@ import { getConflictPolicy } from "@/lib/attendance-policy";
 import { broadcastSheet } from "@/lib/attendance-data";
 import { AttendanceStatus, EventAudience } from "@/generated/prisma/client";
 import { formatEventWhen } from "@/app/(app)/events/event-dates";
-
-const BATCH_PER_TICK = 40;
-const SEND_SPACING_MS = 250;
 
 // The publish action and the cron tick can both call processAbsenceEmails; the
 // flag lives on globalThis so separate server bundles share it.
@@ -44,39 +42,48 @@ async function sendDue(now: Date): Promise<{ sent: number; failed: number }> {
     },
     include: { contact: true, event: true },
     orderBy: { updatedAt: "asc" },
-    take: BATCH_PER_TICK,
+    take: MAIL_BATCH_SIZE,
   });
   if (due.length === 0) return { sent: 0, failed: 0 };
   // Nothing to do until email is set up; the records stay queued.
-  if (!(await getSmtpConfig())) return { sent: 0, failed: 0 };
+  const cfg = await getSmtpConfig();
+  if (!cfg) return { sent: 0, failed: 0 };
 
   const [policy, bandName] = await Promise.all([getConflictPolicy(), getBandName()]);
   let sent = 0;
   let failed = 0;
-  for (const r of due) {
-    const key = { eventId_contactId: { eventId: r.eventId, contactId: r.contactId } };
-    try {
-      let token = r.appealToken;
-      if (!token) {
-        token = randomToken();
-        await prisma.attendanceRecord.update({ where: key, data: { appealToken: token } });
+  // One connection (one Gmail login) for the whole batch.
+  const transport = buildBatchTransport(cfg);
+  try {
+    for (const r of due) {
+      const key = { eventId_contactId: { eventId: r.eventId, contactId: r.contactId } };
+      try {
+        let token = r.appealToken;
+        if (!token) {
+          token = randomToken();
+          await prisma.attendanceRecord.update({ where: key, data: { appealToken: token } });
+        }
+        const mail = absenceEmail({
+          studentName: r.contact.name,
+          title: r.event.title,
+          when: formatEventWhen(r.event.date, r.event.time),
+          appealUrl: appealUrl(token),
+          policy,
+          bandName,
+        });
+        await transport.sendMail({ from: fromHeader(cfg), to: r.contact.email, subject: mail.subject, html: mail.html });
+        await prisma.attendanceRecord.update({ where: key, data: { absenceEmailedAt: now } });
+        sent++;
+      } catch (err) {
+        failed++;
+        console.error(`[absence] email to ${r.contact.email} for "${r.event.title}" failed:`, err);
+        // Gmail is throttling — leave the rest queued for the next tick.
+        if (isTransientSmtpError(err)) break;
       }
-      const mail = absenceEmail({
-        studentName: r.contact.name,
-        title: r.event.title,
-        when: formatEventWhen(r.event.date, r.event.time),
-        appealUrl: appealUrl(token),
-        policy,
-        bandName,
-      });
-      await sendMail({ to: r.contact.email, subject: mail.subject, html: mail.html });
-      await prisma.attendanceRecord.update({ where: key, data: { absenceEmailedAt: now } });
-      sent++;
-    } catch (err) {
-      failed++;
-      console.error(`[absence] email to ${r.contact.email} for "${r.event.title}" failed:`, err);
+      await sleep(MAIL_SPACING_MS);
     }
-    await sleep(SEND_SPACING_MS);
+  } finally {
+    transport.close();
   }
   // Open sheets show an envelope on each emailed student.
   for (const eventId of new Set(due.map((r) => r.eventId))) {
