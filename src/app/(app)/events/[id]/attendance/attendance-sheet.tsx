@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Mail, QrCode, Search, Users } from "lucide-react";
+import { Mail, Pencil, QrCode, Search, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ import { todayUtcInZone } from "@/lib/event-schedule";
 import { CHECKIN_FLAG_LABELS, isCheckInFlag } from "@/lib/checkin-rules";
 import { markAllAction, markAttendanceAction, type MarkResult } from "./actions";
 import { PublishButton } from "./publish-button";
+import { OverrideDialog } from "./override-dialog";
 
 // Selected-state colours per status; unselected buttons share a quiet outline.
 const SELECTED: Record<AttendanceStatus, string> = {
@@ -61,6 +62,10 @@ export function AttendanceSheet({
   const [others, setOthers] = useState<string[]>([]);
   const [live, setLive] = useState(true);
   const [filter, setFilter] = useState("");
+  // Published sheets are read-only; an override collects local changes that
+  // are saved together behind a password prompt.
+  const [overriding, setOverriding] = useState(false);
+  const [draft, setDraft] = useState<Map<string, AttendanceStatus>>(() => new Map());
   const [isPending, startTransition] = useTransition();
   // Per-student tap counter: only the latest tap may clear its pending mark.
   const seq = useRef(new Map<string, number>());
@@ -84,7 +89,11 @@ export function AttendanceSheet({
     return () => es.close();
   }, [eventId, viewerName]);
 
-  const rows = useMemo(() => applyPending(base.rows, pending), [base.rows, pending]);
+  const published = base.publishedAt !== null;
+  const rows = useMemo(
+    () => applyPending(base.rows, published ? draft : pending),
+    [base.rows, published, draft, pending],
+  );
   const counts = useMemo(() => countStatuses(rows.map((r) => r.status)), [rows]);
   const q = filter.trim().toLowerCase();
   const visible = q
@@ -104,6 +113,17 @@ export function AttendanceSheet({
   };
 
   const mark = (contactId: string, status: AttendanceStatus) => {
+    if (published) {
+      if (!overriding) return;
+      const saved = base.rows.find((r) => r.id === contactId)?.status;
+      setDraft((prev) => {
+        const next = new Map(prev);
+        if (status === saved) next.delete(contactId);
+        else next.set(contactId, status);
+        return next;
+      });
+      return;
+    }
     const tap = (seq.current.get(contactId) ?? 0) + 1;
     seq.current.set(contactId, tap);
     setPending((prev) => new Map(prev).set(contactId, status));
@@ -112,6 +132,11 @@ export function AttendanceSheet({
 
   const markAll = (status: AttendanceStatus) =>
     startTransition(async () => settle(await markAllAction(eventId, status)));
+
+  const stopOverride = () => {
+    setOverriding(false);
+    setDraft(new Map());
+  };
 
   const saving = isPending || pending.size > 0;
   const started = base.takenAt !== null;
@@ -160,11 +185,34 @@ export function AttendanceSheet({
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-3 py-2">
         {base.publishedAt ? (
-          <p className="text-sm">
-            <strong>Published</strong> {formatTime(base.publishedAt)}
-            {base.publishedBy ? ` by ${base.publishedBy}` : ""}. Anyone marked absent from now on is emailed within a
-            minute.
-          </p>
+          <>
+            <p className="text-sm">
+              <strong>Published</strong> {formatTime(base.publishedAt)}
+              {base.publishedBy ? ` by ${base.publishedBy}` : ""}.{" "}
+              {overriding
+                ? `Overriding — tap the new statuses, then save. ${draft.size} change${draft.size === 1 ? "" : "s"}.`
+                : "This sheet is locked."}
+            </p>
+            {overriding ? (
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={stopOverride}>
+                  Cancel
+                </Button>
+                <OverrideDialog
+                  eventId={eventId}
+                  changes={[...draft].map(([contactId, status]) => ({ contactId, status }))}
+                  onSaved={(snap) => {
+                    applySnapshot(snap);
+                    stopOverride();
+                  }}
+                />
+              </div>
+            ) : (
+              <Button type="button" variant="outline" size="sm" onClick={() => setOverriding(true)}>
+                <Pencil /> Override attendance
+              </Button>
+            )}
+          </>
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
@@ -191,31 +239,32 @@ export function AttendanceSheet({
             className="pl-8"
           />
         </div>
-        <div className="ml-auto flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => markAll("PRESENT")}>
-            Mark all present
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
-              Mark all absent
-            </AlertDialogTrigger>
-            <AlertDialogContent size="sm">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Mark everyone absent?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This replaces every mark on the sheet, including ones other drum majors made.
-                  {base.publishedAt ? " The sheet is published, so absent students are emailed within a minute." : ""}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep marks</AlertDialogCancel>
-                <AlertDialogCancel variant="destructive" onClick={() => markAll("ABSENT")}>
-                  Mark all absent
-                </AlertDialogCancel>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+        {published ? null : (
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => markAll("PRESENT")}>
+              Mark all present
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
+                Mark all absent
+              </AlertDialogTrigger>
+              <AlertDialogContent size="sm">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Mark everyone absent?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This replaces every mark on the sheet, including ones other drum majors made.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep marks</AlertDialogCancel>
+                  <AlertDialogCancel variant="destructive" onClick={() => markAll("ABSENT")}>
+                    Mark all absent
+                  </AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </div>
 
       <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground tabular-nums">
@@ -239,7 +288,10 @@ export function AttendanceSheet({
           <li className="px-3 py-4 text-sm text-muted-foreground">No one matches “{filter}”.</li>
         ) : null}
         {visible.map((r) => (
-          <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2">
+          <li
+            key={r.id}
+            className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2", draft.has(r.id) && "bg-amber-500/10")}
+          >
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-center gap-1.5 font-medium">
                 <span className="truncate">{r.name}</span>
@@ -269,10 +321,13 @@ export function AttendanceSheet({
                     type="button"
                     role="radio"
                     aria-checked={on}
+                    disabled={published && !overriding}
                     onClick={() => mark(r.id, s)}
                     className={cn(
-                      "h-8 border-r px-2.5 text-xs font-medium transition-colors last:border-r-0",
-                      on ? SELECTED[s] : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+                      "h-8 border-r px-2.5 text-xs font-medium transition-colors last:border-r-0 disabled:cursor-default",
+                      on
+                        ? SELECTED[s]
+                        : "bg-background text-muted-foreground enabled:hover:bg-muted enabled:hover:text-foreground",
                     )}
                   >
                     {ATTENDANCE_LABELS[s]}

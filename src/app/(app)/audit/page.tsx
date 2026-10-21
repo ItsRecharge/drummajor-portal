@@ -8,6 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export const metadata = { title: "Logs — Drum Major Portal" };
 
 // "EVENT_CREATED" -> "Event created"
+// Attendance overrides list each student's change under the entry.
+function overrideChanges(action: string, metadata: unknown): string | null {
+  if (action !== "ATTENDANCE_OVERRIDDEN" || !metadata || typeof metadata !== "object") return null;
+  const changes = (metadata as { changes?: { student: string; from: string; to: string }[] }).changes;
+  return Array.isArray(changes) ? changes.map((c) => `${c.student}: ${c.from} → ${c.to}`).join(" · ") : null;
+}
+
 function humanize(action: string): string {
   const s = action.replace(/_/g, " ").toLowerCase();
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -139,6 +146,9 @@ export default async function AuditPage({
                     <>
                       : <span className="text-muted-foreground">{r.target}</span>
                     </>
+                  ) : null}
+                  {overrideChanges(r.action, r.metadata) ? (
+                    <span className="block text-xs text-muted-foreground">{overrideChanges(r.action, r.metadata)}</span>
                   ) : null}
                 </span>
                 <span className="shrink-0 text-xs text-muted-foreground">

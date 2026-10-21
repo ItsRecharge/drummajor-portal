@@ -17,7 +17,7 @@ export default async function EventAttendancePage({ params }: { params: Promise<
   const { user } = await requireRole(Role.ADMIN, Role.DRUM_MAJOR);
   const { id } = await params;
   const event = await prisma.event.findUnique({ where: { id } });
-  if (!event || event.audience !== EventAudience.BAND) notFound();
+  if (!event || event.audience !== EventAudience.BAND || !event.attendanceRequired) notFound();
   const [snapshot, settings] = await Promise.all([loadSheetSnapshot(id), getAppSettings()]);
   if (!snapshot) notFound();
   const checkInEnabled = settings?.checkInEnabled ?? false;

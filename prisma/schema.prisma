@@ -388,6 +388,8 @@ model Event {
   // Who's expected: the class lists chosen at creation (EventGroup rows; none =
   // Everyone). They drive event emails and the attendance sheet's roster.
   groups            EventGroup[]
+  // False for band events nobody takes roll call at (no sheet, no button).
+  attendanceRequired Boolean     @default(true)
   // Sheet state. attendanceTakenAt = last edit (every tap saves);
   // attendancePublishedAt = when a drum major published it. Absence emails go
   // out only after publish.
