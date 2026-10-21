@@ -94,6 +94,7 @@ export async function createEventAction(_prev: ActionState, formData: FormData):
       // (the daily job sends the reminders); their "Emailed" badge comes from
       // EventNotice rows, not this flag.
       notify: audience === EventAudience.DRUM_MAJORS,
+      attendanceRequired: audience === EventAudience.DRUM_MAJORS || formData.get("noAttendance") !== "on",
       groups: { create: groupIds.map((groupId) => ({ groupId })) },
       createdById: actor.id,
     },
@@ -127,6 +128,11 @@ export async function updateEventAction(_prev: ActionState, formData: FormData):
   const sel = await expectedGroupIds(formData);
   if (!sel.ok) return { error: sel.error };
 
+  const attendanceRequired = formData.get("noAttendance") !== "on";
+  if (!attendanceRequired && existing.attendancePublishedAt) {
+    return { error: "Attendance is already published for this event." };
+  }
+
   const dateChanged = existing.date.getTime() !== parsed.data.date.getTime();
   const before = existing.groups.map((g) => g.groupId).sort().join(",");
   const groupsChanged = before !== [...sel.ids].sort().join(",");
@@ -140,6 +146,7 @@ export async function updateEventAction(_prev: ActionState, formData: FormData):
         location: parsed.data.location || null,
         date: parsed.data.date,
         time: parsed.data.time || null,
+        attendanceRequired,
         groups: { deleteMany: {}, create: sel.ids.map((groupId) => ({ groupId })) },
       },
     }),

@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     where: { id },
     include: { attendance: { include: { contact: true }, orderBy: { contact: { name: "asc" } } } },
   });
-  if (!event || event.audience !== EventAudience.BAND) return new Response("Not found", { status: 404 });
+  if (!event || event.audience !== EventAudience.BAND || !event.attendanceRequired) return new Response("Not found", { status: 404 });
 
   const csv = eventAttendanceCsv(
     event.attendance.map((r) => ({

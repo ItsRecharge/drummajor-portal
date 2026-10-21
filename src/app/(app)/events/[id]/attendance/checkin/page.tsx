@@ -21,7 +21,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ id: st
   await requireRole(Role.ADMIN, Role.DRUM_MAJOR);
   const { id } = await params;
   const event = await prisma.event.findUnique({ where: { id } });
-  if (!event || event.audience !== EventAudience.BAND) notFound();
+  if (!event || event.audience !== EventAudience.BAND || !event.attendanceRequired) notFound();
   const [settings, session, snapshot] = await Promise.all([
     getAppSettings(),
     loadCheckInSession(id),

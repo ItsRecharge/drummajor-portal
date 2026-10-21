@@ -54,7 +54,7 @@ export function PublishButton({
           <AlertDialogHeader>
             <AlertDialogTitle>Publish attendance?</AlertDialogTitle>
             <AlertDialogDescription>
-              {`This emails the ${absent} student${absent === 1 ? "" : "s"} marked absent right away, each with a personal appeal link. Once published, anyone you mark absent later is emailed within a minute. This can't be undone.`}
+              {`This emails the ${absent} student${absent === 1 ? "" : "s"} marked absent right away, each with a personal appeal link. Once published, the sheet is locked — changes need an override with your password. This can't be undone.`}
               {present === 0 ? " Nobody is marked present yet." : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>

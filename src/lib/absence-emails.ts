@@ -2,6 +2,7 @@
 // personal appeal link), the decision, and the heads-up to leadership. Pure.
 import { button, escapeText, headingHtml, shell } from "./email-layout.ts";
 import { conflictPolicyHtml, type ConflictPolicy, type EventMail } from "./event-emails.ts";
+import { ATTENDANCE_LABELS, type AttendanceStatus } from "./attendance.ts";
 
 function compose(subject: string, heading: string, content: string, bandName?: string): EventMail {
   const body = `${headingHtml(heading)}${content}`;
@@ -49,6 +50,29 @@ export function appealSubmittedEmail(opts: AbsenceBase & { reason: string; revie
     `<p><strong>${escapeText(opts.studentName)}</strong> is appealing their absence from <strong>${escapeText(opts.title)}</strong> (${escapeText(opts.when)}):</p>` +
       `<blockquote style="margin:8px 0 12px;padding:10px 14px;border-left:3px solid #b3122b;background:#faf8f5;border-radius:0 6px 6px 0;white-space:pre-wrap">${escapeText(opts.reason)}</blockquote>` +
       button(opts.reviewUrl, "Review appeals"),
+    opts.bandName,
+  );
+}
+
+// A published sheet was overridden: the student hears the old and new status.
+// A change to Absent carries the appeal link like the original absence notice.
+export function attendanceChangedEmail(
+  opts: AbsenceBase & { from: AttendanceStatus; to: AttendanceStatus; appealUrl?: string },
+): EventMail {
+  const from = ATTENDANCE_LABELS[opts.from];
+  const to = ATTENDANCE_LABELS[opts.to];
+  const absent = opts.to === "ABSENT";
+  return compose(
+    `Attendance updated: ${opts.title} — ${opts.when}`,
+    "Your attendance was updated",
+    `<p>Hi ${escapeText(opts.studentName)}, your attendance for <strong>${escapeText(opts.title)}</strong> (${escapeText(opts.when)}) was changed from <strong>${from}</strong> to <strong>${to}</strong> by the drum majors.</p>` +
+      (absent
+        ? conflictPolicyHtml(opts.policy, opts.title) +
+          (opts.appealUrl
+            ? `<p style="margin-top:16px">If this absence was excused — or you were there — appeal it and a drum major will review it:</p>` +
+              button(opts.appealUrl, "Appeal this absence")
+            : "")
+        : ""),
     opts.bandName,
   );
 }

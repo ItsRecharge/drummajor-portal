@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { Download } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { Role } from "@/generated/prisma/client";
 import { getAttendanceGroups, getAttendanceSummary, pickAttendanceGroup } from "@/lib/attendance-data";
-import { formatRate } from "@/lib/attendance";
+import { countStatuses, formatRate, type AttendanceStatus } from "@/lib/attendance";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,14 +24,27 @@ export default async function AttendancePage({
   const { group: requestedGroupId } = await searchParams;
   const groups = await getAttendanceGroups();
   const group = pickAttendanceGroup(groups, requestedGroupId, null);
-  const [{ rows, eventsTaken }, appealsRaw] = await Promise.all([
+  const [{ rows, eventsTaken }, appealsRaw, publishedRaw] = await Promise.all([
     getAttendanceSummary(group),
     prisma.absenceAppeal.findMany({
       include: { record: { include: { contact: true, event: true } }, decidedBy: { select: { name: true } } },
       orderBy: { submittedAt: "desc" },
       take: 100,
     }),
+    // Past sheets: viewing needs no password; changing one is an override.
+    prisma.event.findMany({
+      where: { attendancePublishedAt: { not: null } },
+      include: { attendance: { select: { status: true } } },
+      orderBy: { date: "desc" },
+      take: 200,
+    }),
   ]);
+  const published = publishedRaw.map((e) => ({
+    id: e.id,
+    title: e.title,
+    when: formatEventWhen(e.date, e.time),
+    counts: countStatuses(e.attendance.map((r) => r.status as AttendanceStatus)),
+  }));
   const appeals: AppealRow[] = appealsRaw.map((a) => ({
     id: a.id,
     student: a.record.contact.name,
@@ -63,6 +77,41 @@ export default async function AttendancePage({
         </CardHeader>
         <CardContent>
           <AppealsCard pending={pending} decided={decided} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Published sheets</CardTitle>
+          <CardDescription>
+            Open any past sheet to look it over. Changing one needs Override attendance and your password, and the
+            students whose status changes are emailed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {published.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No sheets published yet.</p>
+          ) : (
+            <ul className="divide-y rounded-lg border">
+              {published.map((e) => (
+                <li key={e.id}>
+                  <Link
+                    href={`/events/${e.id}/attendance`}
+                    className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 hover:bg-muted/50"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{e.title}</span>
+                      <span className="block text-xs text-muted-foreground">{e.when}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {e.counts.present} present · {e.counts.late} late · {e.counts.excused} excused ·{" "}
+                      {e.counts.absent} absent
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 

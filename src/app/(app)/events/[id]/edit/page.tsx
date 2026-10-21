@@ -38,7 +38,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
           <CardTitle>Details</CardTitle>
           <CardDescription>
             {event.attendancePublishedAt
-              ? "Attendance for this event is published. Students newly expected aren't marked or emailed unless you mark them on the sheet."
+              ? "Attendance for this event is published. Students newly expected show as Absent but aren't emailed unless you override the sheet."
               : "Emails and calendar entries already sent are not recalled."}
           </CardDescription>
         </CardHeader>
@@ -55,6 +55,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
               date: event.date.toISOString().slice(0, 10),
               time: event.time ?? "",
               groupIds: event.groups.map((g) => g.groupId),
+              noAttendance: !event.attendanceRequired,
             }}
           />
         </CardContent>

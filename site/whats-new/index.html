@@ -149,7 +149,8 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
           <li><strong>Each band event has an Attendance button.</strong> The sheet lists whoever is in the event's class lists; change that with the event's <em>Edit</em> button.</li>
           <li><strong>Tap names as you call them.</strong> <em>Present</em>, <em>Late</em>, <em>Excused</em> or <em>Absent</em>, or <em>Mark all present</em> and fix the exceptions (<em>Mark all absent</em> asks you to confirm). The search box finds a name.</li>
           <li><strong>It saves on every tap.</strong> There is no Save button. Several drum majors can take roll at the same time and see each other's taps within a second; <em>Also here</em> shows who has the sheet open. The event row shows <em>In progress</em> until you publish.</li>
-          <li><strong>Publish when you're done.</strong> <em>Publish attendance</em> fills in Absent for anyone still unmarked and emails the absent students. The sheet stays editable afterwards; the row shows <em>Published</em>.</li>
+          <li><strong>Publish when you're done.</strong> <em>Publish attendance</em> fills in Absent for anyone still unmarked and emails the absent students. After that the sheet is locked; the row shows <em>Published</em>. To fix it, use <em>Override attendance</em> and enter your password — your name is logged and each student whose status changed is emailed. Old sheets are under <em>Published sheets</em> on the Attendance page.</li>
+          <li><strong>Events without roll call.</strong> Tick <em>No attendance</em> when adding a band event and it gets no sheet; reminders still go out.</li>
           <li><strong>Season totals</strong> are under <em>Attendance</em> in the sidebar: expected, present, late, excused, absent, and a rate that ignores excused absences, counting published sheets only. Both screens have a CSV export.</li>
         </ul>
       </div>
@@ -175,7 +176,7 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
     <div class="feature">
       <div class="feature-copy">
         <ul class="rules">
-          <li><strong>When you click Publish attendance and confirm,</strong> every student marked Absent (including anyone you left unmarked) gets an email saying attendance is mandatory and may impact their grade, with a personal <em>Appeal this absence</em> link. An unpublished sheet never emails anyone. After publishing, anyone you newly mark Absent is emailed within a minute, and nobody is emailed twice for the same event.</li>
+          <li><strong>When you click Publish attendance and confirm,</strong> every student marked Absent (including anyone you left unmarked) gets an email saying attendance is mandatory and may impact their grade, with a personal <em>Appeal this absence</em> link. An unpublished sheet never emails anyone. After publishing, changes go through <em>Override attendance</em>, and each student whose status changes gets an <em>Attendance updated</em> email instead (with an appeal link if they're now Absent).</li>
           <li><strong>The appeal is one text box,</strong> no login needed. When a student sends one, you get a notification and an email.</li>
           <li><strong>Excuse it or Deny</strong> on the Attendance page. <em>Excuse it</em> changes their record to Excused. Either way the student gets an email with the decision.</li>
           <li><strong>Fixing the sheet also works.</strong> If you change someone from Absent to Present yourself, their pending appeal is approved automatically and they are emailed.</li>
@@ -272,7 +273,7 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
         <details class="mail" open>
   <summary><span><strong>Marked absent</strong><span class="mail-sub">Marked absent: Homecoming Halftime Show — Fri, Oct 16 at 6:30 PM</span></span></summary>
   <div class="body">
-    <p class="mail-meta"><span class="k">To</span>The student<br><span class="k">Sent</span>When a drum major publishes the attendance sheet, to each student marked Absent; anyone marked Absent afterwards is emailed within a minute (once per event).</p>
+    <p class="mail-meta"><span class="k">To</span>The student<br><span class="k">Sent</span>When a drum major publishes the attendance sheet, to each student marked Absent. Later overrides send an <em>Attendance updated</em> email instead.</p>
     <div class="mail-frame"><div style="background:#faf8f5;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1d1c">
   <div style="max-width:600px;margin:0 auto">
     <div style="background:#b3122b;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:14px">Winchester Band</div>
@@ -343,7 +344,7 @@ details.mail summary>span{display:grid;gap:.15rem;min-width:0}
     <div class="steps">
       <div class="step"><span class="set">1</span><h3>Add every event as soon as you know it</h3><p>Title, date, time, place, and who's expected (one or more class lists). Events far out don't send an email; they just appear on the calendar and in the monthly overview. Use the pencil to edit later; changing the date restarts the reminders.</p></div>
       <div class="step"><span class="set">2</span><h3>Share the calendar address</h3><p>Your portal address + <code>/calendar</code>. Tell people to use <em>Subscribe</em> so it shows up on their phone.</p></div>
-      <div class="step"><span class="set">3</span><h3>Take attendance at every rehearsal and performance</h3><p>Open the event → <em>Attendance</em> → tap names → <em>Publish attendance</em>. Nothing is emailed until you publish; after that the sheet stays editable.</p></div>
+      <div class="step"><span class="set">3</span><h3>Take attendance at every rehearsal and performance</h3><p>Open the event → <em>Attendance</em> → tap names → <em>Publish attendance</em>. Nothing is emailed until you publish; after that, changes need <em>Override attendance</em> and your password.</p></div>
       <div class="step"><span class="set">4</span><h3>Check the Attendance page for appeals</h3><p>You get a notification and an email when one comes in. <em>Excuse it</em> or <em>Deny</em>; the student is emailed either way.</p></div>
       <div class="step"><span class="set">5</span><h3>Keep the CC drum major current</h3><p>If a banner asks who should be CC'd on conflicts, pick someone. It means the previous person is no longer in the portal.</p></div>
     </div>

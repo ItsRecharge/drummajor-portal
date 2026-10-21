@@ -17,6 +17,7 @@ export type EventFormInitial = {
   date: string;
   time: string;
   groupIds: string[];
+  noAttendance: boolean;
 };
 
 export function EventForm({
@@ -84,6 +85,20 @@ export function EventForm({
               Pick one or more. Everyone covers the whole roster, so it stands alone.
             </p>
           </fieldset>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="noAttendance"
+              defaultChecked={initial?.noAttendance ?? false}
+              className="mt-0.5 size-4 accent-primary"
+            />
+            <span>
+              <span className="font-medium">No attendance</span>
+              <span className="block text-xs text-muted-foreground">
+                Nobody takes roll call for this event. Reminders still go out.
+              </span>
+            </span>
+          </label>
           <p className="text-sm text-muted-foreground">
             {initial
               ? "Changing the date restarts the reminder emails (a week out, three days out, the morning of). Changing who's expected updates the attendance sheet."

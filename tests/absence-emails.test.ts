@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { absenceEmail, appealDecisionEmail, appealSubmittedEmail } from "../src/lib/absence-emails.ts";
+import { absenceEmail, appealDecisionEmail, appealSubmittedEmail, attendanceChangedEmail } from "../src/lib/absence-emails.ts";
 import type { ConflictPolicy } from "../src/lib/event-emails.ts";
 
 const policy: ConflictPolicy = { contactName: "Mr. Costello", contactEmail: "c@x.org", ccName: "Jake Killian", ccEmail: "j@x.org" };
@@ -32,4 +32,15 @@ test("appealSubmittedEmail (to leadership) quotes the reason and links the revie
   assert.equal(subject, "Absence appeal: Ann <Lee> — Fall Rehearsal");
   assert.ok(html.includes("I was at the &lt;dentist&gt;"));
   assert.ok(html.includes('href="https://p.example/attendance"'));
+});
+
+test("attendanceChangedEmail: old → new status; appeal link only when changed to Absent", () => {
+  const up = attendanceChangedEmail({ ...base, from: "ABSENT", to: "PRESENT" });
+  assert.equal(up.subject, "Attendance updated: Fall Rehearsal — Sat, Oct 3 at 6:00 PM");
+  assert.ok(up.html.includes("from <strong>Absent</strong> to <strong>Present</strong>"));
+  assert.ok(!up.html.includes("Appeal this absence"));
+  const down = attendanceChangedEmail({ ...base, from: "PRESENT", to: "ABSENT", appealUrl: "https://p.example/appeal/t" });
+  assert.ok(down.html.includes("to <strong>Absent</strong>"));
+  assert.ok(down.html.includes('href="https://p.example/appeal/t"'));
+  assert.ok(down.html.includes("Attendance is mandatory"));
 });

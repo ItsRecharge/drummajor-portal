@@ -259,8 +259,10 @@ export default async function GuidePage() {
             <strong>Absent</strong> for anyone still unmarked and emails every absent student right away:
             attendance is mandatory and may affect their grade, and they get a personal link to{" "}
             <strong>appeal</strong> if the absence was excused or recorded wrong. An unpublished sheet never
-            emails anyone. After publishing, the sheet stays editable (the row shows <em>Published</em>) and
-            anyone you newly mark absent is emailed within a minute. Appeals land at the top of the{" "}
+            emails anyone. After publishing, the sheet is locked (the row shows <em>Published</em>). To fix it,
+            click <strong>Override attendance</strong>, tap the new statuses, then <em>Save override</em> and enter
+            your password: your name goes in the log and each student whose status changed is emailed. Old sheets
+            are listed under <em>Published sheets</em> on the <em>Attendance</em> page. Appeals land at the top of the{" "}
             <em>Attendance</em> page — <em>Excuse it</em> flips the record to Excused, <em>Deny</em> leaves it; the
             student is emailed either way. Fixing a status on the sheet yourself also settles a pending appeal.
           </li>

@@ -62,12 +62,14 @@ export function EventList({
           {e.description ? <p className="mt-1 text-sm text-muted-foreground">{e.description}</p> : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {showAttendance && e.attendancePublishedAt ? (
+          {showAttendance && !e.attendanceRequired ? (
+            <Badge variant="outline">No attendance</Badge>
+          ) : showAttendance && e.attendancePublishedAt ? (
             <Badge variant="secondary">Published</Badge>
           ) : showAttendance && e.attendanceTakenAt ? (
             <Badge variant="outline">In progress</Badge>
           ) : null}
-          {showAttendance ? (
+          {showAttendance && e.attendanceRequired ? (
             <Link href={`/events/${e.id}/attendance`} className={buttonVariants({ variant: "outline", size: "sm" })}>
               <ClipboardCheck /> Attendance
             </Link>

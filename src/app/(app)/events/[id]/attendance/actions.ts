@@ -15,6 +15,12 @@ import { getConflictPolicy } from "@/lib/attendance-policy";
 import { appealDecisionEmail } from "@/lib/absence-emails";
 import { todayUtcInZone } from "@/lib/event-schedule";
 import { checkInAnchorSchema } from "@/lib/validation";
+import { verifyPassword } from "@/lib/password";
+import { randomToken } from "@/lib/tokens";
+import { createRateLimiter, type RateLimiter } from "@/lib/rate-limit";
+import { appealUrl } from "@/lib/absence";
+import { attendanceChangedEmail } from "@/lib/absence-emails";
+import { ATTENDANCE_LABELS } from "@/lib/attendance";
 import { closeCheckIn, loadCheckInSession, openCheckIn, type CheckInSession } from "@/lib/checkin-data";
 import { AppealStatus, EventAudience, Role, type Event } from "@/generated/prisma/client";
 import { formatEventWhen } from "../../event-dates";
@@ -27,9 +33,12 @@ export type MarkResult = { ok: true; snapshot: SheetSnapshot } | { ok: false; er
 
 const SHEET_ROLES = [Role.ADMIN, Role.DRUM_MAJOR] as const;
 
+// A published sheet only changes through overrideAttendanceAction.
+const PUBLISHED_ERROR = "This sheet is published. Use Override attendance to change it.";
+
 async function loadBandEvent(eventId: string): Promise<Event | null> {
   const event = await prisma.event.findUnique({ where: { id: eventId } });
-  return event && event.audience === EventAudience.BAND ? event : null;
+  return event && event.audience === EventAudience.BAND && event.attendanceRequired ? event : null;
 }
 
 type Cleared = { appealId: string; name: string; email: string };
@@ -85,6 +94,7 @@ export async function markAttendanceAction(
   if (!isAttendanceStatus(status)) return { ok: false, error: "Unknown status." };
   const event = await loadBandEvent(eventId);
   if (!event) return { ok: false, error: "Event not found." };
+  if (event.attendancePublishedAt) return { ok: false, error: PUBLISHED_ERROR };
 
   const key = { eventId_contactId: { eventId, contactId } };
   const { contacts } = await getEventRoster(eventId);
@@ -108,6 +118,7 @@ export async function markAllAction(eventId: string, status: AttendanceStatus): 
   if (!isAttendanceStatus(status)) return { ok: false, error: "Unknown status." };
   const event = await loadBandEvent(eventId);
   if (!event) return { ok: false, error: "Event not found." };
+  if (event.attendancePublishedAt) return { ok: false, error: PUBLISHED_ERROR };
 
   const [{ contacts }, existing] = await Promise.all([
     getEventRoster(eventId),
@@ -189,6 +200,129 @@ export async function publishAttendanceAction(eventId: string): Promise<ActionSt
     success: true,
     message: `Published — ${counts.absent} absence email${counts.absent === 1 ? "" : "s"} going out.`,
   };
+}
+
+// Changing a published sheet: the drum major re-enters their password, the
+// change is audited under their name, and every student whose status changed
+// is emailed (old → new; a new Absent gets an appeal link). Changed rows get
+// absenceEmailedAt so the absence worker never sends a second notice. While
+// impersonating, the real account's password and name are what count.
+export type OverrideChange = { contactId: string; status: AttendanceStatus };
+
+const PASSWORD_RULE = { limit: 5, windowMs: 10 * 60_000 };
+const limiterSlot = globalThis as unknown as { __dmpOverrideLimiter?: RateLimiter };
+const passwordLimiter = (limiterSlot.__dmpOverrideLimiter ??= createRateLimiter());
+
+export async function overrideAttendanceAction(
+  eventId: string,
+  changes: OverrideChange[],
+  password: string,
+): Promise<MarkResult & { message?: string }> {
+  const { actor } = await requireRole(...SHEET_ROLES);
+  const event = await loadBandEvent(eventId);
+  if (!event) return { ok: false, error: "Event not found." };
+  if (!event.attendancePublishedAt) return { ok: false, error: "Publish the sheet first." };
+  if (!Array.isArray(changes) || changes.length === 0) return { ok: false, error: "Nothing to change." };
+  if (changes.some((c) => typeof c?.contactId !== "string" || !isAttendanceStatus(c.status))) {
+    return { ok: false, error: "Unknown status." };
+  }
+
+  if (!passwordLimiter.hit(actor.id, PASSWORD_RULE).allowed) {
+    return { ok: false, error: "Too many tries. Wait a few minutes and try again." };
+  }
+  if (typeof password !== "string" || !(await verifyPassword(password, actor.passwordHash))) {
+    await logAudit({ actorId: actor.id, action: "ATTENDANCE_OVERRIDE_DENIED", target: event.title, metadata: { by: actor.name } });
+    return { ok: false, error: "Wrong password." };
+  }
+
+  // Last change per student wins; drop ones that don't change anything.
+  const wanted = new Map(changes.map((c) => [c.contactId, c.status]));
+  // Students added to a class list after publishing have no record; the sheet
+  // shows them as Absent.
+  const [records, { contacts }] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+      where: { eventId, contactId: { in: [...wanted.keys()] } },
+      include: { contact: { select: { name: true, email: true } } },
+    }),
+    getEventRoster(eventId),
+  ]);
+  const have = new Set(records.map((r) => r.contactId));
+  const rows = [
+    ...records.map((r) => ({ ...r, status: r.status as AttendanceStatus })),
+    ...contacts
+      .filter((c) => wanted.has(c.id) && !have.has(c.id))
+      .map((c) => ({
+        contactId: c.id,
+        status: "ABSENT" as AttendanceStatus,
+        appealToken: null,
+        contact: { name: c.name, email: c.email },
+      })),
+  ];
+  const diffs = rows
+    .filter((r) => wanted.get(r.contactId) !== r.status)
+    .map((r) => ({ record: r, from: r.status, to: wanted.get(r.contactId)! }));
+  if (diffs.length === 0) return { ok: false, error: "Nothing changed." };
+
+  const now = new Date();
+  const toCleared = new Map<AttendanceStatus, string[]>();
+  for (const d of diffs) toCleared.set(d.to, [...(toCleared.get(d.to) ?? []), d.record.contactId]);
+  const cleared = (
+    await Promise.all([...toCleared].map(([status, ids]) => pendingAppeals(eventId, ids, status)))
+  ).flat();
+  // A new Absent needs an appeal link; reuse the one they already have.
+  const tokens = new Map(diffs.map((d) => [d.record.contactId, d.record.appealToken ?? (d.to === "ABSENT" ? randomToken() : null)]));
+
+  await prisma.$transaction([
+    ...diffs.map((d) =>
+      prisma.attendanceRecord.upsert({
+        where: { eventId_contactId: { eventId, contactId: d.record.contactId } },
+        create: { eventId, contactId: d.record.contactId, status: d.to, absenceEmailedAt: now, appealToken: tokens.get(d.record.contactId) },
+        update: { status: d.to, absenceEmailedAt: now, appealToken: tokens.get(d.record.contactId) },
+      }),
+    ),
+    ...approveAppeals(cleared, actor.id, now),
+    prisma.event.update({ where: { id: eventId }, data: { attendanceTakenAt: now } }),
+  ]);
+  await logAudit({
+    actorId: actor.id,
+    action: "ATTENDANCE_OVERRIDDEN",
+    target: event.title,
+    metadata: {
+      by: actor.name,
+      changes: diffs.map((d) => ({
+        student: d.record.contact.name,
+        from: ATTENDANCE_LABELS[d.from],
+        to: ATTENDANCE_LABELS[d.to],
+      })),
+    },
+  });
+
+  after(async () => {
+    const [policy, bandName] = await Promise.all([getConflictPolicy(), getBandName()]);
+    const when = formatEventWhen(event.date, event.time);
+    for (const d of diffs) {
+      const token = tokens.get(d.record.contactId);
+      const mail = attendanceChangedEmail({
+        studentName: d.record.contact.name,
+        title: event.title,
+        when,
+        from: d.from,
+        to: d.to,
+        appealUrl: d.to === "ABSENT" && token ? appealUrl(token) : undefined,
+        policy,
+        bandName,
+      });
+      await sendMail({ to: d.record.contact.email, subject: mail.subject, html: mail.html }).catch((err) =>
+        console.error(`[attendance] override email to ${d.record.contact.email} failed:`, err),
+      );
+    }
+  });
+
+  revalidatePath("/attendance");
+  const res = await finish(eventId);
+  return res.ok
+    ? { ...res, message: `Saved — ${diffs.length} student${diffs.length === 1 ? "" : "s"} emailed.` }
+    : res;
 }
 
 // ---------------------------------------------------------------------------
