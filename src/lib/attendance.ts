@@ -24,6 +24,10 @@ export type SheetRow = {
   name: string;
   instrument: string;
   status: AttendanceStatus;
+  // False until someone marks the student. Unmarked rows carry status ABSENT
+  // because that is what publishing makes them, but the sheet shows them as
+  // "Not marked" so a half-done roll call doesn't look finished.
+  marked: boolean;
   emailedAt: string | null;
   // When the student checked themselves in by QR (see checkin-rules.ts), and
   // the review flags on that check-in.
@@ -60,7 +64,7 @@ const iso = (v: string | Date | null | undefined): string | null =>
   v instanceof Date ? v.toISOString() : (v ?? null);
 
 // The roster plus anyone who already has a record (they may have left the group
-// since), alphabetical. No record yet = Absent. `flagsByContact` carries the
+// since), alphabetical. No record yet = Absent, with marked false. `flagsByContact` carries the
 // review flags of each student's QR check-in.
 export function buildSheetRows(
   roster: RosterContact[],
@@ -76,6 +80,7 @@ export function buildSheetRows(
       name,
       instrument: instrument ?? "",
       status: r?.status ?? "ABSENT",
+      marked: r !== undefined,
       emailedAt: iso(r?.absenceEmailedAt),
       checkedInAt: iso(r?.checkedInAt),
       checkInFlags: flagsByContact.get(id) ?? [],
@@ -86,12 +91,13 @@ export function buildSheetRows(
   return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// Optimistic overrides for taps still in flight. Untouched rows keep identity.
+// Optimistic overrides for taps still in flight; a tapped row counts as marked.
+// Untouched rows keep identity.
 export function applyPending(rows: SheetRow[], pending: ReadonlyMap<string, AttendanceStatus>): SheetRow[] {
   if (pending.size === 0) return rows;
   return rows.map((r) => {
     const s = pending.get(r.id);
-    return s && s !== r.status ? { ...r, status: s } : r;
+    return s && (s !== r.status || !r.marked) ? { ...r, status: s, marked: true } : r;
   });
 }
 

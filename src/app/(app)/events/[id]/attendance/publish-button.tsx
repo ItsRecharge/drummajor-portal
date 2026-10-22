@@ -23,13 +23,20 @@ export function PublishButton({
   eventId,
   absent,
   present,
+  unmarked,
+  others,
   disabledReason,
 }: {
   eventId: string;
   absent: number;
   present: number;
+  // Students nobody has marked; publishing makes them Absent.
+  unmarked: number;
+  // Other drum majors with the sheet open right now.
+  others: string[];
   disabledReason: string | null;
 }) {
+  const emailed = absent + unmarked;
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -53,8 +60,22 @@ export function PublishButton({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Publish attendance?</AlertDialogTitle>
+            {others.length > 0 ? (
+              <p className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm">
+                <strong>{others.join(", ")} {others.length === 1 ? "is" : "are"} still on this sheet.</strong> Make
+                sure they&apos;re done before publishing.
+              </p>
+            ) : null}
+            {unmarked > 0 ? (
+              <p className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm">
+                <strong>
+                  {unmarked} student{unmarked === 1 ? " isn't" : "s aren't"} marked yet.
+                </strong>{" "}
+                Publishing marks {unmarked === 1 ? "them" : "them all"} Absent and emails them.
+              </p>
+            ) : null}
             <AlertDialogDescription>
-              {`This emails the ${absent} student${absent === 1 ? "" : "s"} marked absent right away, each with a personal appeal link. Once published, the sheet is locked — changes need an override with your password. This can't be undone.`}
+              {`This emails ${emailed} student${emailed === 1 ? "" : "s"} as absent right away, each with a personal appeal link. Once published, the sheet is locked — changes need an override with your password. This can't be undone.`}
               {present === 0 ? " Nobody is marked present yet." : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
