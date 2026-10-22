@@ -23,7 +23,7 @@ test("statuses: four values in UI order with labels", () => {
   assert.ok(!isAttendanceStatus(null));
 });
 
-test("buildSheetRows: roster order, missing record → Absent, record-only students kept, emailedAt passed through", () => {
+test("buildSheetRows: roster order, missing record → unmarked Absent, record-only students kept, emailedAt passed through", () => {
   const rows = buildSheetRows(
     [
       { id: "b", name: "Bo Li", instrument: "Tuba" },
@@ -35,13 +35,14 @@ test("buildSheetRows: roster order, missing record → Absent, record-only stude
     ],
   );
   assert.deepEqual(rows, [
-    { id: "a", name: "Ann Lee", instrument: "", status: "ABSENT", emailedAt: null, checkedInAt: null, checkInFlags: [] },
-    { id: "b", name: "Bo Li", instrument: "Tuba", status: "LATE", emailedAt: null, checkedInAt: null, checkInFlags: [] },
+    { id: "a", name: "Ann Lee", instrument: "", status: "ABSENT", marked: false, emailedAt: null, checkedInAt: null, checkInFlags: [] },
+    { id: "b", name: "Bo Li", instrument: "Tuba", status: "LATE", marked: true, emailedAt: null, checkedInAt: null, checkInFlags: [] },
     {
       id: "z",
       name: "Zed Q",
       instrument: "Drums",
       status: "ABSENT",
+      marked: true,
       emailedAt: "2026-09-23T20:00:00.000Z",
       checkedInAt: null,
       checkInFlags: [],
@@ -77,8 +78,8 @@ test("buildSheetRows: QR check-in time is passed through as ISO and flags come f
 
 test("applyPending overrides only the listed students", () => {
   const rows = [
-    { id: "a", name: "Ann", instrument: "", status: "ABSENT" as const, emailedAt: null, checkedInAt: null, checkInFlags: [] },
-    { id: "b", name: "Bo", instrument: "", status: "ABSENT" as const, emailedAt: null, checkedInAt: null, checkInFlags: [] },
+    { id: "a", name: "Ann", instrument: "", status: "ABSENT" as const, marked: true, emailedAt: null, checkedInAt: null, checkInFlags: [] },
+    { id: "b", name: "Bo", instrument: "", status: "ABSENT" as const, marked: true, emailedAt: null, checkedInAt: null, checkInFlags: [] },
   ];
   const out = applyPending(rows, new Map([["b", "PRESENT" as const]]));
   assert.deepEqual(
@@ -89,6 +90,14 @@ test("applyPending overrides only the listed students", () => {
     ],
   );
   assert.equal(out[0], rows[0]); // untouched rows keep identity
+});
+
+test("applyPending: tapping Absent on an unmarked student marks them", () => {
+  const rows = [
+    { id: "a", name: "Ann", instrument: "", status: "ABSENT" as const, marked: false, emailedAt: null, checkedInAt: null, checkInFlags: [] },
+  ];
+  const out = applyPending(rows, new Map([["a", "ABSENT" as const]]));
+  assert.deepEqual([out[0].status, out[0].marked], ["ABSENT", true]);
 });
 
 test("countStatuses tallies each status", () => {

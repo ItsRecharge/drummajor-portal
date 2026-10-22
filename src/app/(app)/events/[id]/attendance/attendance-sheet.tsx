@@ -94,7 +94,14 @@ export function AttendanceSheet({
     () => applyPending(base.rows, published ? draft : pending),
     [base.rows, published, draft, pending],
   );
-  const counts = useMemo(() => countStatuses(rows.map((r) => r.status)), [rows]);
+  // Before publishing, students nobody has marked yet are "Not marked", not
+  // Absent: another drum major may still be working through them.
+  const isUnmarked = (r: { marked: boolean }) => !published && !r.marked;
+  const counts = useMemo(
+    () => countStatuses(rows.filter((r) => published || r.marked).map((r) => r.status)),
+    [rows, published],
+  );
+  const unmarked = published ? 0 : rows.filter((r) => !r.marked).length;
   const q = filter.trim().toLowerCase();
   const visible = q
     ? rows.filter((r) => r.name.toLowerCase().includes(q) || r.instrument.toLowerCase().includes(q))
@@ -222,6 +229,8 @@ export function AttendanceSheet({
               eventId={eventId}
               absent={counts.absent}
               present={counts.present}
+              unmarked={unmarked}
+              others={others}
               disabledReason={publishBlocked}
             />
           </>
@@ -241,9 +250,25 @@ export function AttendanceSheet({
         </div>
         {published ? null : (
           <div className="ml-auto flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => markAll("PRESENT")}>
-              Mark all present
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
+                Mark all present
+              </AlertDialogTrigger>
+              <AlertDialogContent size="sm">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Mark everyone present?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This replaces every mark on the sheet, including ones other drum majors made.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep marks</AlertDialogCancel>
+                  <AlertDialogCancel variant="default" onClick={() => markAll("PRESENT")}>
+                    Mark all present
+                  </AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <AlertDialog>
               <AlertDialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
                 Mark all absent
@@ -280,6 +305,11 @@ export function AttendanceSheet({
         <span>
           <strong className="text-foreground">{counts.absent}</strong> absent
         </span>
+        {unmarked > 0 ? (
+          <span>
+            <strong className="text-foreground">{unmarked}</strong> not marked
+          </span>
+        ) : null}
         <span className="ml-auto">{rows.length} expected</span>
       </p>
 
@@ -295,6 +325,11 @@ export function AttendanceSheet({
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-center gap-1.5 font-medium">
                 <span className="truncate">{r.name}</span>
+                {isUnmarked(r) ? (
+                  <Badge variant="outline" className="h-4 px-1.5 text-[10px] text-muted-foreground">
+                    Not marked
+                  </Badge>
+                ) : null}
                 {r.emailedAt ? (
                   <Mail className="size-3.5 shrink-0 text-muted-foreground" aria-label="Absence email sent" />
                 ) : null}
@@ -314,7 +349,7 @@ export function AttendanceSheet({
             </div>
             <div role="radiogroup" aria-label={`${r.name} status`} className="flex overflow-hidden rounded-md border">
               {ATTENDANCE_STATUSES.map((s) => {
-                const on = s === r.status;
+                const on = !isUnmarked(r) && s === r.status;
                 return (
                   <button
                     key={s}
